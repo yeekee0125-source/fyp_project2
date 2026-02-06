@@ -76,7 +76,7 @@ class DatabaseService {
 
     final user = authResponse.user;
     if (user == null) {
-      throw Exception('Supabase Auth registration failed');
+      throw Exception('Registration failed');
     }
 
     // Insert profile into Supabase users table
@@ -104,6 +104,7 @@ class DatabaseService {
   // LOGIN USER (ONLINE FIRST)
   Future<bool> loginUser(String email, String password) async {
     try {
+      await supabase.auth.signOut();
       // Supabase Auth login
       final response = await supabase.auth.signInWithPassword(
         email: email.trim(),
@@ -164,6 +165,48 @@ class DatabaseService {
     );
 
     return result.isNotEmpty && result.first['role'] == 'admin';
+  }
+
+  // PASSWORD RESET
+  Future<void> resetPassword(String email) async {
+    await supabase.auth.resetPasswordForEmail(email);
+  }
+
+  // ---------- PROFILE MANAGEMENT ----------
+  // GET CURRENT USER DATA
+  Future<Map<String, dynamic>?> getCurrentUserProfile() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return null;
+
+    final db = await database;
+    final maps = await db.query('users', where: 'id = ?', whereArgs: [user.id]);
+
+    if (maps.isNotEmpty) {
+      return maps.first;
+    } else {
+      // Fallback to Supabase if local is empty
+      final data = await supabase.from('users').select().eq('id', user.id).single();
+      return data;
+    }
+  }
+
+  // UPDATE PROFILE (Fulfills Requirement)
+  Future<void> updateProfile(String name, String phone) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    // Update Supabase
+    await supabase.from('users').update({
+      'name': name,
+      'phone': phone,
+    }).eq('id', user.id);
+
+    // Update Local
+    final db = await database;
+    await db.update('users', {
+      'name': name,
+      'phone': phone,
+    }, where: 'id = ?', whereArgs: [user.id]);
   }
 
   // RECIPE CRUD (SUPABASE + SQLITE)

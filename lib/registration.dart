@@ -205,7 +205,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
                             labelText: "Phone",
-                            prefixIcon: const Icon(Icons.lock_outline),
+                            prefixIcon: Icon(Icons.phone),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30),
                                 borderSide: const BorderSide(color: Colors.orange, width: 10)

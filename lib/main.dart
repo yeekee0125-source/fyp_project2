@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:fyp_project2/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'recipe_list.dart';
 
 const String url = 'https://ivmmxdmqzkzkkencnhue.supabase.co';
 const String key = 'sb_publishable_ipmlvwO4J3IXnT18CUR4Jw_C-XDEq4Y';
@@ -34,7 +32,7 @@ class KitchenBuddyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         useMaterial3: true,
       ),
-      home: const RecipeListPage(),
+      home: const LoginPage(),
     );
   }
 }
