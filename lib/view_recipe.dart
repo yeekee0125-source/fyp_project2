@@ -28,16 +28,45 @@ class ViewRecipePage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          //display image if path exists
+          // Image
           if (recipe.imagePath != null)
-            ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.file(File(recipe.imagePath!))),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: recipe.imagePath!.startsWith('http')
+                  ? Image.network(recipe.imagePath!, fit: BoxFit.cover)
+                  : Image.file(File(recipe.imagePath!), fit: BoxFit.cover),
+            ),
+
           const SizedBox(height: 20),
-          Text(recipe.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const Divider(color: Colors.orange),
+
+          // Title
+          Text(
+            recipe.title,
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 10),
+
+          // Category & Serving
+          _infoRow(Icons.category, recipe.category),
+          const SizedBox(height: 6),
+          _infoRow(Icons.people, 'Servings: ${recipe.servings}'),
+          const SizedBox(height: 6),
+          _infoRow(
+            Icons.calendar_today,
+            'Created: ${recipe.createdOn.toLocal().toString().split(' ')[0]}',
+          ),
+
+          const Divider(height: 30, color: Colors.orange),
+
+          // Ingredients
           _contentTile('Ingredients', recipe.ingredients),
+
+          // Instructions
           _contentTile('Instructions', recipe.steps),
         ],
       ),
+
       //update action: floating button to edit
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orange,
@@ -81,4 +110,15 @@ class ViewRecipePage extends StatelessWidget {
       ],
     );
   }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.orange),
+        const SizedBox(width: 6),
+        Text(text, style: const TextStyle(fontSize: 16)),
+      ],
+    );
+  }
+
 }

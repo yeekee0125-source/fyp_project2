@@ -5,8 +5,9 @@ class RecipeModel {
   final String steps;
   final String category;
   final int servings;
-  final DateTime createdOn;
   final String? imagePath;
+  final DateTime createdOn;
+
 
 
   RecipeModel({
@@ -16,19 +17,23 @@ class RecipeModel {
     required this.steps,
     required this.category,
     required this.servings,
-    required this.createdOn,
     this.imagePath,
+    required this.createdOn,
+
   });
 
-  factory RecipeModel.fromJson(Map<String, dynamic> map) {
+  factory RecipeModel.fromJson(Map<String, dynamic> json) {
     return RecipeModel(
-      id: map['id'],
-      title: map['title'],
-      ingredients: map['ingredients'],
-      steps: map['steps'],
-      category: map['category'],
-      servings: map['servings'],
-      createdOn: DateTime.parse(map['createdOn']),
+      id: json['id'],
+      title: json['title'],
+      ingredients: json['ingredients'],
+      steps: json['steps'],
+      category: json['category'],
+      servings: json['servings'],
+      imagePath: json['imagePath'],
+      createdOn: json['createdOn'] != null
+          ? DateTime.parse(json['createdOn'])
+          : DateTime.now(),
     );
   }
 
@@ -40,6 +45,7 @@ class RecipeModel {
       'steps': steps,
       'category': category,
       'servings': servings,
+      'imagePath': imagePath,
       'createdOn': createdOn.toIso8601String(),
     };
   }

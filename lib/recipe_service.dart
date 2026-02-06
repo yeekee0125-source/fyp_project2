@@ -34,9 +34,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
       _stepsCtrl.text = widget.recipe!.steps;
       _categoryCtrl.text = widget.recipe!.category;
       _servingCtrl.text = widget.recipe!.servings.toString();
-      if (widget.recipe!.imagePath != null) {
-        _selectedImage = File(widget.recipe!.imagePath!);
-      }
     }
   }
 
@@ -63,8 +60,9 @@ class _AddRecipePageState extends State<AddRecipePage> {
       steps: _stepsCtrl.text.trim(),
       category: _categoryCtrl.text.trim(),
       servings: int.tryParse(_servingCtrl.text) ?? 1,
-      createdOn: widget.recipe?.createdOn ?? DateTime.now(),
       imagePath: finalImagePath,
+      createdOn: widget.recipe?.createdOn ?? DateTime.now(),
+
     );
 
     if (widget.recipe == null) {
@@ -117,11 +115,14 @@ class _AddRecipePageState extends State<AddRecipePage> {
                 height: 120,
                 width: 120,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.black),
                   image: _selectedImage != null
                       ? DecorationImage(
                     image: FileImage(_selectedImage!),
+                    fit: BoxFit.cover,
+                  )
+                      : widget.recipe?.imagePath != null
+                      ? DecorationImage(
+                    image: NetworkImage(widget.recipe!.imagePath!),
                     fit: BoxFit.cover,
                   )
                       : null,

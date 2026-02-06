@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -44,13 +45,16 @@ class DatabaseService {
 
     await db.execute('''
       CREATE TABLE recipes(
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        ingredients TEXT,
-        steps TEXT,
-        category TEXT,
-        imagePath TEXT,
-        createdOn DATETIME DEFAULT CURRENT_TIMESTAMP)
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      ingredients TEXT,
+      steps TEXT,
+      category TEXT,
+      servings INTEGER,
+      imagePath TEXT,
+      createdOn DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+
     ''');
     log('Recipes table created');
 
@@ -162,7 +166,6 @@ class DatabaseService {
     return result.isNotEmpty && result.first['role'] == 'admin';
   }
 
-
   // RECIPE CRUD (SUPABASE + SQLITE)
   // CREATE
   Future<void> addRecipe(RecipeModel recipe) async {
@@ -230,20 +233,33 @@ class DatabaseService {
     return data.map((e) => RecipeModel.fromJson(e)).toList();
   }
 
-  //Photo
   Future<String?> uploadRecipeImage(File imageFile, String recipeId) async {
     try {
-      final fileName = 'recipe_$recipeId.jpg';
-      final path = 'recipe_images/$fileName';
+      final supabase = Supabase.instance.client;
 
-      // Upload to Supabase Bucket
-      await supabase.storage.from('recipes').upload(path, imageFile);
+      final fileExt = imageFile.path.split('.').last;
+      final filePath = '$recipeId.$fileExt';
 
-      // Get the Public URL
-      return supabase.storage.from('recipes').getPublicUrl(path);
+      // Upload image
+      await supabase.storage
+          .from('recipes') //
+          .upload(
+        filePath,
+        imageFile,
+        fileOptions: const FileOptions(upsert: true),
+      );
+
+      // Get public URL
+      final publicUrl = supabase.storage
+          .from('recipes')
+          .getPublicUrl(filePath);
+
+      return publicUrl;
     } catch (e) {
-      log('Image upload failed: $e');
+      debugPrint('Image upload error: $e');
       return null;
     }
   }
+
+
 }

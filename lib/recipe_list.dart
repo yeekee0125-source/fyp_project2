@@ -26,7 +26,14 @@ class _RecipeListPageState extends State<RecipeListPage> {
           leading: recipe.imagePath != null
               ? ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.file(
+            child: recipe.imagePath!.startsWith('http')
+                ? Image.network(
+              recipe.imagePath!,
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+            )
+                : Image.file(
               File(recipe.imagePath!),
               width: 50,
               height: 50,
@@ -34,6 +41,8 @@ class _RecipeListPageState extends State<RecipeListPage> {
             ),
           )
               : const Icon(Icons.restaurant_menu, color: Colors.orange),
+
+
           title: Text(
             recipe.title,
             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
