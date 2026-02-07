@@ -22,13 +22,28 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _loadProfile() async {
-    final data = await db.getCurrentUserProfile();
-    if (data != null) {
-      _nameCtrl.text = data['name'] ?? '';
-      _phoneCtrl.text = data['phone'] ?? '';
+    try {
+      final data = await db.getCurrentUserProfile();
+
+      if (data != null) {
+        _nameCtrl.text = data['name'] ?? '';
+        _phoneCtrl.text = data['phone'] ?? '';
+      }
+    } catch (e) {
+      debugPrint('Profile load error: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load profile')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-    setState(() => _isLoading = false);
   }
+
 
   void _updateProfile() async {
     setState(() => _isLoading = true);

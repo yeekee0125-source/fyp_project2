@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer';
 import 'dart:io';
 import 'recipe_model.dart';
+import 'package:flutter/foundation.dart';
+
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -104,7 +106,6 @@ class DatabaseService {
   // LOGIN USER (ONLINE FIRST)
   Future<bool> loginUser(String email, String password) async {
     try {
-      await supabase.auth.signOut();
       // Supabase Auth login
       final response = await supabase.auth.signInWithPassword(
         email: email.trim(),
@@ -169,8 +170,12 @@ class DatabaseService {
 
   // PASSWORD RESET
   Future<void> resetPassword(String email) async {
-    await supabase.auth.resetPasswordForEmail(email);
+    await Supabase.instance.client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.flutter://reset-password',
+    );
   }
+
 
   // ---------- PROFILE MANAGEMENT ----------
   // GET CURRENT USER DATA
@@ -178,17 +183,36 @@ class DatabaseService {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
+    // 🌐 WEB → Supabase ONLY
+    if (kIsWeb) {
+      final data = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
+      return data;
+    }
+
+    // 📱 MOBILE → SQLite first
     final db = await database;
-    final maps = await db.query('users', where: 'id = ?', whereArgs: [user.id]);
+    final maps = await db.query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
 
     if (maps.isNotEmpty) {
       return maps.first;
     } else {
-      // Fallback to Supabase if local is empty
-      final data = await supabase.from('users').select().eq('id', user.id).single();
+      final data = await supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
       return data;
     }
   }
+
 
   // UPDATE PROFILE (Fulfills Requirement)
   Future<void> updateProfile(String name, String phone) async {

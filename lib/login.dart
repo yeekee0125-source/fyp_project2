@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // <--- ADD THIS LINE
-import 'home_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database_service.dart';
 import 'registration.dart';
+import 'forgot_password.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,138 +17,33 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordCtrl = TextEditingController();
   final dbService = DatabaseService();
 
-  //bool _isLoading = false;
+  bool _isLoading = false;
   final bool _obscurePassword = true; // To toggle password visibility
 
-  void _login() async {
-    if (_formKey.currentState!.validate()) {
-      bool success = await dbService.loginUser(
-        _emailCtrl.text,
-        _passwordCtrl.text,
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    final success = await dbService.loginUser(
+      _emailCtrl.text.trim(),
+      _passwordCtrl.text.trim(),
+    );
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid email or password'),
+          backgroundColor: Colors.red,
+        ),
       );
-
-      if (!mounted) return;
-
-      if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid login'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
+
+    if (mounted) setState(() => _isLoading = false);
+    // ✅ NO NAVIGATION HERE
   }
 
-  @override
-  void initState() {
-    super.initState();
 
-    // Listen for password recovery events
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final event = data.event;
-      if (event == AuthChangeEvent.passwordRecovery) {
-        // Show dialog to enter NEW password
-        _showChangePasswordDialog();
-      }
-    });
-  }
-
-  void _showChangePasswordDialog() {
-    final newPasswordCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set New Password'),
-        content: TextField(
-          controller: newPasswordCtrl,
-          decoration: const InputDecoration(hintText: 'Enter new password'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await Supabase.instance.client.auth.updateUser(
-                UserAttributes(password: newPasswordCtrl.text),
-              );
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password updated successfully!')),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // FORGOT PASSWORD
-  void _showForgotPasswordDialog() {
-    final resetEmailCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Password'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Enter your email to receive a reset link.'),
-            const SizedBox(height: 10),
-            TextField(
-              controller: resetEmailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final email = resetEmailCtrl.text.trim();
-              if (email.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter your email')),
-                );
-                return;
-              }
-
-              Navigator.pop(context); // close dialog
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sending reset link...')),
-              );
-
-              try {
-                await dbService.resetPassword(email);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content:
-                      Text('Check your email for a password reset link')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: $e')),
-                );
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -268,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: _showForgotPasswordDialog,
+                            onPressed: () => showForgotPasswordDialog(context),
                             child: const Text('Forgot Password?', style: TextStyle(color: Colors.brown)),
                           ),
                         ),
