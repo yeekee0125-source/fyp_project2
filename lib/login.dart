@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database_service.dart';
+import 'home_page.dart';
 import 'registration.dart';
 import 'forgot_password.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -30,20 +32,27 @@ class _LoginPageState extends State<LoginPage> {
       _passwordCtrl.text.trim(),
     );
 
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid email or password'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-
     if (mounted) setState(() => _isLoading = false);
-    // ✅ NO NAVIGATION HERE
+
+    if (success) {
+      if (mounted) {
+        //  Navigate to HomePage if login is successful
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid email or password'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
-
-
 
   @override
   Widget build(BuildContext context) {

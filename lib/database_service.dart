@@ -7,7 +7,6 @@ import 'dart:io';
 import 'recipe_model.dart';
 import 'package:flutter/foundation.dart';
 
-
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
 
@@ -54,12 +53,13 @@ class DatabaseService {
       category TEXT,
       servings INTEGER,
       imagePath TEXT,
+      status TEXT,
+      created_by TEXT,
       createdOn DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 
     ''');
     log('Recipes table created');
-
   }
 
   // REGISTER USER
@@ -70,7 +70,6 @@ class DatabaseService {
     required String phone,
     String role = 'user',
   }) async {
-
     final authResponse = await supabase.auth.signUp(
       email: email.trim(),
       password: password.trim(),
@@ -87,7 +86,7 @@ class DatabaseService {
       'name': name,
       'email': email,
       'phone': phone,
-      'role' : role,
+      'role': role,
     });
 
     // Cache profile locally (SQLite)
@@ -97,7 +96,7 @@ class DatabaseService {
       'name': name,
       'email': email,
       'phone': phone,
-      'role' : role,
+      'role': role,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     log('User registered successfully');
@@ -153,6 +152,7 @@ class DatabaseService {
     final db = await database;
     await db.delete('users');
   }
+
   //add role check admin/user
   Future<bool> isAdmin() async {
     final user = supabase.auth.currentUser;
@@ -176,7 +176,6 @@ class DatabaseService {
     );
   }
 
-
   // ---------- PROFILE MANAGEMENT ----------
   // GET CURRENT USER DATA
   Future<Map<String, dynamic>?> getCurrentUserProfile() async {
@@ -195,11 +194,7 @@ class DatabaseService {
 
     // 📱 MOBILE → SQLite first
     final db = await database;
-    final maps = await db.query(
-      'users',
-      where: 'id = ?',
-      whereArgs: [user.id],
-    );
+    final maps = await db.query('users', where: 'id = ?', whereArgs: [user.id]);
 
     if (maps.isNotEmpty) {
       return maps.first;
@@ -213,59 +208,72 @@ class DatabaseService {
     }
   }
 
-
   // UPDATE PROFILE (Fulfills Requirement)
   Future<void> updateProfile(String name, String phone) async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
     // Update Supabase
-    await supabase.from('users').update({
-      'name': name,
-      'phone': phone,
-    }).eq('id', user.id);
+    await supabase
+        .from('users')
+        .update({'name': name, 'phone': phone})
+        .eq('id', user.id);
 
     // Update Local
     final db = await database;
-    await db.update('users', {
-      'name': name,
-      'phone': phone,
-    }, where: 'id = ?', whereArgs: [user.id]);
+    await db.update(
+      'users',
+      {'name': name, 'phone': phone},
+      where: 'id = ?',
+      whereArgs: [user.id],
+    );
   }
 
   // RECIPE CRUD (SUPABASE + SQLITE)
   // CREATE
   Future<void> addRecipe(RecipeModel recipe) async {
-    await supabase.from('recipes').insert(recipe.toMap()); // Supabase
-    final db = await database; // SQLite
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final data = {
+      ...recipe.toMap(),
+      'status': 'pending',       // 👈 moderation
+      'created_by': user.id,     // 👈 ownership
+    };
+
+    // Supabase
+    await supabase.from('recipes').insert(data);
+
+    // SQLite
+    final db = await database;
     await db.insert(
       'recipes',
-      recipe.toMap(),
+      data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
+
   // READ (ONLINE FIRST, FALLBACK OFFLINE)
   Future<List<RecipeModel>> fetchRecipes() async {
     try {
-      final response = await supabase.from('recipes').select();
+      final response = await supabase
+          .from('recipes')
+          .select()
+          .eq('status', 'approved');
       return response.map<RecipeModel>((e) {
         return RecipeModel.fromJson(e);
       }).toList();
     } catch (_) {
       final db = await database;
-      final data =
-      await db.query('recipes', orderBy: 'createdOn DESC');
+      final data = await db.query('recipes', orderBy: 'createdOn DESC');
       return data.map((e) => RecipeModel.fromJson(e)).toList();
     }
   }
 
   //update
   Future<void> updateRecipe(RecipeModel recipe) async {
-    await supabase
-        .from('recipes')
-        .update(recipe.toMap())
-        .eq('id', recipe.id);
+    await supabase.from('recipes').update(recipe.toMap()).eq('id', recipe.id);
 
     final db = await database;
     await db.update(
@@ -281,11 +289,7 @@ class DatabaseService {
     await supabase.from('recipes').delete().eq('id', id);
 
     final db = await database;
-    await db.delete(
-      'recipes',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('recipes', where: 'id = ?', whereArgs: [id]);
   }
 
   //filter by category
@@ -311,15 +315,13 @@ class DatabaseService {
       await supabase.storage
           .from('recipes') //
           .upload(
-        filePath,
-        imageFile,
-        fileOptions: const FileOptions(upsert: true),
-      );
+            filePath,
+            imageFile,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
       // Get public URL
-      final publicUrl = supabase.storage
-          .from('recipes')
-          .getPublicUrl(filePath);
+      final publicUrl = supabase.storage.from('recipes').getPublicUrl(filePath);
 
       return publicUrl;
     } catch (e) {
@@ -327,6 +329,69 @@ class DatabaseService {
       return null;
     }
   }
+
+  //Report user
+  Future<void> reportUser({
+    required String reportedUserId,
+    required String reason,
+  }) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    await supabase.from('reported_users').insert({
+      'reported_user_id': reportedUserId,
+      'reporter_id': user.id,
+      'reason': reason,
+    });
+  }
+
+  Future<List<RecipeModel>> fetchMyRecipes() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return [];
+
+    final response = await supabase
+        .from('recipes')
+        .select()
+        .eq('created_by', user.id)
+        .order('createdOn', ascending: false);
+
+    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+  }
+
+
+  Future<List<Map<String, dynamic>>> fetchReportedUsers() async {
+    if (!await isAdmin()) return [];
+
+    return await supabase
+        .from('reported_users')
+        .select('id, reason, status, created_at, users!reported_user_id(name, email)')
+        .order('created_at', ascending: false);
+  }
+
+  Future<void> updateReportStatus(String reportId, String status) async {
+    await supabase
+        .from('reported_users')
+        .update({'status': status})
+        .eq('id', reportId);
+  }
+
+  Future<List<RecipeModel>> fetchPendingRecipes() async {
+    final response = await supabase
+        .from('recipes')
+        .select()
+        .eq('status', 'pending');
+
+    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+  }
+
+  Future<void> approveRecipe(String recipeId) async {
+    await supabase.from('recipes').update({'status': 'approved'}).eq('id', recipeId);
+  }
+
+  Future<void> rejectRecipe(String recipeId) async {
+    await supabase.from('recipes').update({'status': 'rejected'}).eq('id', recipeId);
+  }
+
 
 
 }

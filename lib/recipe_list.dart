@@ -42,12 +42,29 @@ class _RecipeListPageState extends State<RecipeListPage> {
           )
               : const Icon(Icons.restaurant_menu, color: Colors.orange),
 
-
           title: Text(
             recipe.title,
             style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
           ),
-          subtitle: Text(recipe.category, style: const TextStyle(color: Colors.black54)),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(recipe.category, style: const TextStyle(color: Colors.black54)),
+              if (recipe.status == 'pending')
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    "Pending Approval",
+                    style: TextStyle(fontSize: 12, color: Colors.deepOrange, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.orange),
           onTap: () async {
             // Navigates to the Detail page as required by your functional objectives [cite: 89, 732]
@@ -97,7 +114,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: FutureBuilder<List<RecipeModel>>(
-        future: db.fetchRecipes(),
+        future: db.fetchMyRecipes(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Colors.orange));

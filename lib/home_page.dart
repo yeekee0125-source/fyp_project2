@@ -3,16 +3,41 @@ import 'database_service.dart';
 import 'profile_page.dart';
 import 'login.dart';
 import 'recipe_list.dart';
+import 'admin_dashboard.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final db = DatabaseService();
+  State<HomePage> createState() => _HomePageState();
+}
 
+class _HomePageState extends State<HomePage> {
+  final db = DatabaseService();
+  String _role = 'user'; // Default to normal user
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole();
+  }
+
+  // Fetch the role from DatabaseService
+  void _checkUserRole() async {
+    final userData = await db.getCurrentUserProfile();
+    if (userData != null && mounted) {
+      setState(() {
+        _role = userData['role'] ?? 'user'; // Get role, default to 'user'
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF3CC), // same yellow background
+      backgroundColor: const Color(0xFFFFF3CC),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFF3CC),
         elevation: 0,
@@ -26,6 +51,37 @@ class HomePage extends StatelessWidget {
         ),
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
+          // 2. Add an Admin Icon in the top bar (Optional)
+          // Inside HomePage build method...
+          if (_role == 'admin')
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                label: const Text(
+                  'Admin Dashboard',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: () {
+                  // ✅ FIX: Actually navigate to the Admin Dashboard page
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminDashboard()),
+                  );
+                },
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
@@ -39,17 +95,21 @@ class HomePage extends StatelessWidget {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await db.logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-                    (route) => false,
-              );
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                );
+              }
             },
           ),
         ],
       ),
 
-      body: Padding(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -62,22 +122,24 @@ class HomePage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               elevation: 2,
-              child: const Padding(
-                padding: EdgeInsets.all(20),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    Icon(Icons.restaurant_menu,
+                    const Icon(Icons.restaurant_menu,
                         size: 50, color: Colors.orange),
-                    SizedBox(height: 10),
+                    const SizedBox(height: 10),
                     Text(
-                      'Welcome to KitchenBuddy',
-                      style: TextStyle(
+                      _role == 'admin'
+                          ? 'Welcome, Admin!' // Personalized for Admin
+                          : 'Welcome to KitchenBuddy',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
+                    const SizedBox(height: 6),
+                    const Text(
                       'Manage and explore your recipes 🍳',
                       style: TextStyle(color: Colors.black54),
                       textAlign: TextAlign.center,
@@ -89,7 +151,7 @@ class HomePage extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            /// 📖 View Recipes Button
+            //View Recipes Button
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -119,6 +181,41 @@ class HomePage extends StatelessWidget {
                 },
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            //ADMIN ONLY BUTTON
+            //This button only appears if the role is 'admin'
+            if (_role == 'admin')
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                  label: const Text(
+                    'Admin Dashboard',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AdminDashboard(),
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         ),
       ),
