@@ -51,6 +51,8 @@ class _KitchenBuddyAppState extends State<KitchenBuddyApp> {
     });
   }
 
+  //
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     // Check if user is already logged in for initial screen
