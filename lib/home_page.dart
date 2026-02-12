@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ai_recipe_page.dart';
 import 'database_service.dart';
 import 'profile_page.dart';
 import 'login.dart';
@@ -74,7 +75,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 onPressed: () {
-                  // ✅ FIX: Actually navigate to the Admin Dashboard page
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AdminDashboard()),
@@ -215,7 +215,17 @@ class _HomePageState extends State<HomePage> {
                     );
                   },
                 ),
+
               ),
+            ElevatedButton(
+              child: const Text('AI Recipe'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AIRecipePage()),
+                );
+              },
+            ),
           ],
         ),
       ),
