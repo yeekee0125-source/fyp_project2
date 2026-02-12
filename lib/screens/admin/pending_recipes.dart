@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'database_service.dart';
-import 'recipe_model.dart';
+import '../../services/database_service.dart';
+import '../../models/recipe_model.dart';
 
 class AdminPendingRecipes extends StatelessWidget {
   const AdminPendingRecipes({super.key});
@@ -26,7 +26,7 @@ class AdminPendingRecipes extends StatelessWidget {
               return Card(
                 child: ListTile(
                   title: Text(r.title),
-                  subtitle: Text(r.category),
+                  subtitle: Text(r.category.join(', ')),//jx
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
