@@ -7,7 +7,7 @@ class VideoService {
 
   String get currentUserId => _supabase.auth.currentUser?.id ?? '';
 
-  // UPLOAD logic with Error Handling
+  // UPLOAD logic
   Future<void> uploadVideo({
     required File videoFile,
     required String title,
@@ -16,10 +16,9 @@ class VideoService {
   }) async {
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-      final filePath = '$currentUserId/$fileName'; // Organized by User ID
+      final filePath = '$currentUserId/$fileName';
 
-      // 1. Upload to Storage
-      // Ensure bucket 'tutorial_videos' is created in Supabase Dashboard
+      // 1. Storage Upload
       await _supabase.storage.from('tutorial_videos').upload(
         filePath,
         videoFile,
@@ -27,11 +26,9 @@ class VideoService {
       );
 
       // 2. Get Public URL
-      final String videoUrl =
-      _supabase.storage.from('tutorial_videos').getPublicUrl(filePath);
+      final String videoUrl = _supabase.storage.from('tutorial_videos').getPublicUrl(filePath);
 
-      // 3. Insert to Video Table
-      // Ensure 'videos' table RLS allow INSERTs
+      // 3. Database Insert
       await _supabase.from('videos').insert({
         'user_id': currentUserId,
         'title': title,
@@ -41,20 +38,14 @@ class VideoService {
       });
 
       print("Upload successful for: $title");
-    } on StorageException catch (e) {
-      print("Storage Error: ${e.message}");
-      rethrow;
-    } on PostgrestException catch (e) {
-      print("Database Error: ${e.message}");
-      rethrow;
     } catch (e) {
-      print("Unexpected Error: $e");
+      print("Upload Error: $e");
       rethrow;
     }
   }
 
-  // STREAM: Real-time updates based on skill level
   Stream<List<VideoModel>> getVideoStream(String level) {
+    // If 'All', we don't apply .eq() at all to avoid the filter logic
     if (level == 'All') {
       return _supabase
           .from('videos')
@@ -63,33 +54,53 @@ class VideoService {
           .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
     }
 
+    // If a specific level is selected, .eq() MUST come immediately after .stream()
     return _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
-        .eq('skill_level', level)
-        .order('created_at', ascending: false)
+        .eq('skill_level', level) // Filter applied first
+        .order('created_at', ascending: false) // Order applied second
         .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
   }
 
-  // DELETE logic: Admin or Owner permissions
+  // DELETE logic
   Future<void> deleteVideo(String videoId, String uploaderId) async {
     try {
       final userRes = await _supabase
           .from('users')
           .select('role')
           .eq('id', currentUserId)
-          .single();
+          .maybeSingle();
 
-      bool isAdmin = userRes['role'] == 'admin';
+      bool isAdmin = userRes != null && userRes['role'] == 'admin';
 
       if (currentUserId == uploaderId || isAdmin) {
         await _supabase.from('videos').delete().eq('id', videoId);
       } else {
-        throw Exception("Unauthorized: You do not have permission to delete this.");
+        throw Exception("Unauthorized");
       }
     } catch (e) {
       print("Delete Error: $e");
       rethrow;
     }
+  }
+  Future<void> updateVideoDetails(String videoId, String newTitle, String newDesc) async {
+    await _supabase.from('videos').update({
+      'title': newTitle,
+      'description': newDesc,
+    }).eq('id', videoId);
+  }
+
+  Stream<List<VideoModel>> getMyVideosStream() {
+    final userId = _supabase.auth.currentUser?.id;
+
+    if (userId == null) return Stream.value([]);
+
+    return _supabase
+        .from('videos')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId) // Filter by the logged-in user at the database level
+        .order('created_at', ascending: false)
+        .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
   }
 }
