@@ -1,122 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:fyp_project2/screens/auth/login.dart';
+import 'package:fyp_project2/screens/profile/profile_page.dart';
+import 'package:fyp_project2/screens/recipe/upload_selection_screen.dart';
+import 'package:fyp_project2/screens/user_message_page.dart';
+import 'package:fyp_project2/services/database_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/admin/admin_dashboard.dart';
+import 'screens/home/home_page.dart';
 
-void main() {
-  runApp(const MyApp());
+// Keys for navigation and snackbars
+final navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+const String url = 'https://ivmmxdmqzkzkkencnhue.supabase.co';
+const String key = 'sb_publishable_ipmlvwO4J3IXnT18CUR4Jw_C-XDEq4Y';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+      url: url,
+      anonKey: key,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      )
+  );
+
+  runApp(const KitchenBuddyApp());
 }
-//
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
 
-  //
-  // This widget is the root of your application.
+class KitchenBuddyApp extends StatelessWidget {
+  const KitchenBuddyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      navigatorKey: navigatorKey,
+      scaffoldMessengerKey: messengerKey,
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFFFF3C2),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const AuthGate(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+/// Decision maker: Shows Login, Admin Dashboard, or User Home
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) return const LoginPage();
+
+    return FutureBuilder<bool>(
+      future: DatabaseService().isAdmin(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        return (snapshot.data == true)
+            ? const AdminDashboard()
+            : const MainNavigationContainer();
+      },
+    );
+  }
+}
+
+/// The Main Shell for the User App
+class MainNavigationContainer extends StatefulWidget {
+  const MainNavigationContainer({super.key});
+  @override
+  State<MainNavigationContainer> createState() => _MainNavigationContainerState();
+}
+
+class _MainNavigationContainerState extends State<MainNavigationContainer> {
+  int _currentIndex = 0;
+
+  // These widgets align with the indices 0, 1, 2, 3, 4
+  final List<Widget> _pages = [
+    const HomePage(),                              // Index 0
+    const Center(child: Text("Calorie Calculator")),  // Index 1
+    const SizedBox(),                               // Index 2 (Empty for FAB)
+    const UserMessagePage(),                       // Index 3 (Functional Message Page)
+    const ProfilePage(),                           // Index 4
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      // preserves state of pages (e.g. scroll position in messages)
+      body: IndexedStack(index: _currentIndex, children: _pages),
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        shape: const CircleBorder(),
+        backgroundColor: Colors.white,
+        elevation: 4,
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadSelectionScreen()));
+        },
+        child: const Icon(Icons.add_circle, size: 55, color: Colors.orange),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: Colors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            _navItem(0, Icons.home_outlined, Icons.home, "Home"),
+            _navItem(1, Icons.local_fire_department_outlined, Icons.local_fire_department, "Calorie"),
+
+            const SizedBox(width: 40), // Space for FAB
+
+            _navItem(3, Icons.message_outlined, Icons.message, "Messages"),
+            _navItem(4, Icons.person_outline, Icons.person, "Profile"),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+
+  Widget _navItem(int index, IconData icon, IconData activeIcon, String label) {
+    bool isSelected = _currentIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _currentIndex = index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? Colors.orange : Colors.grey
+          ),
+          Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isSelected ? Colors.orange : Colors.grey,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              )
+          ),
+        ],
       ),
     );
   }
