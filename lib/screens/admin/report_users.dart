@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'database_service.dart';
+import '../../services/database_service.dart';
 
 class AdminReportedUsers extends StatelessWidget {
   const AdminReportedUsers({super.key});

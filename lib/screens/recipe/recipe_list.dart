@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'database_service.dart';
-import 'recipe_model.dart';
-import 'recipe_service.dart';
+import '../../models/recipe_model.dart';
+import '../../services/database_service.dart';
+import '../../services/recipe_service.dart';
 import 'view_recipe.dart';
 
 
@@ -49,7 +49,12 @@ class _RecipeListPageState extends State<RecipeListPage> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(recipe.category, style: const TextStyle(color: Colors.black54)),
+              Text(
+                  recipe.category.isNotEmpty
+                      ? recipe.category.join(' • ')
+                      : 'Uncategorized',
+                  style: const TextStyle(color: Colors.black54)
+              ),
               if (recipe.status == 'pending')
                 Container(
                   margin: const EdgeInsets.only(top: 4),

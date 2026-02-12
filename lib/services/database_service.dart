@@ -1,17 +1,14 @@
-import 'package:flutter/cupertino.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer';
 import 'dart:io';
-import 'recipe_model.dart';
+import '../models/recipe_model.dart';
 import 'package:flutter/foundation.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
-
   factory DatabaseService() => _instance;
-
   DatabaseService._internal();
 
   // ---------- SQLITE ----------
@@ -55,9 +52,12 @@ class DatabaseService {
       imagePath TEXT,
       status TEXT,
       created_by TEXT,
-      createdOn DATETIME DEFAULT CURRENT_TIMESTAMP
+      createdOn DATETIME DEFAULT CURRENT_TIMESTAMP,
+      cookingTime INTEGER,
+      skillLevel TEXT,
+      totalViews INTEGER,
+      user_id TEXT
 )
-
     ''');
     log('Recipes table created');
   }
@@ -229,7 +229,7 @@ class DatabaseService {
     );
   }
 
-  // RECIPE CRUD (SUPABASE + SQLITE)
+  // RECIPE CRUD (SUPABASE + SQLITE) //jx change to no sqlite
   // CREATE
   Future<void> addRecipe(RecipeModel recipe) async {
     final user = supabase.auth.currentUser;
@@ -237,20 +237,10 @@ class DatabaseService {
 
     final data = {
       ...recipe.toMap(),
-      'status': 'pending',       // 👈 moderation
-      'created_by': user.id,     // 👈 ownership
+      'status': 'pending',
+      'user_id': user.id, // Links to your public.users table
     };
-
-    // Supabase
     await supabase.from('recipes').insert(data);
-
-    // SQLite
-    final db = await database;
-    await db.insert(
-      'recipes',
-      data,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
   }
 
 
@@ -292,16 +282,28 @@ class DatabaseService {
     await db.delete('recipes', where: 'id = ?', whereArgs: [id]);
   }
 
-  //filter by category
+  //filter by category(jx updated)
   Future<List<RecipeModel>> getRecipesByCategory(String category) async {
-    final db = await database;
-    final data = await db.query(
-      'recipes',
-      where: 'category = ?',
-      whereArgs: [category],
-    );
+    try {
+      // Try Supabase Array contains filter
+      final response = await supabase
+          .from('recipes')
+          .select()
+          .contains('category', [category])
+          .eq('status', 'approved');
 
-    return data.map((e) => RecipeModel.fromJson(e)).toList();
+      return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+    } catch (e) {
+      // Fallback to SQLite (using LIKE to find category in comma string)
+      final db = await database;
+      final data = await db.query(
+        'recipes',
+        where: 'category LIKE ?',
+        whereArgs: ['%$category%'],
+      );
+
+      return data.map((e) => RecipeModel.fromJson(e)).toList();
+    }
   }
 
   Future<String?> uploadRecipeImage(File imageFile, String recipeId) async {
@@ -352,7 +354,7 @@ class DatabaseService {
     final response = await supabase
         .from('recipes')
         .select()
-        .eq('created_by', user.id)
+        .eq('user_id', user.id) // CHANGED from 'created_by' to 'user_id'
         .order('createdOn', ascending: false);
 
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
@@ -392,6 +394,75 @@ class DatabaseService {
     await supabase.from('recipes').update({'status': 'rejected'}).eq('id', recipeId);
   }
 
+  //jx
+  // 1. Fetch Top Trending (Sort by Views/Likes)
+  Future<List<RecipeModel>> fetchTrendingRecipes() async {
+    final response = await supabase
+        .from('recipes')
+        .select()
+        .eq('status', 'approved')
+        .order('totalViews', ascending: false) // Most viewed first
+        .limit(10);
 
+    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+  }
+
+// 2. Fetch Quick Meals (Filtered by cookingTime)
+  Future<List<RecipeModel>> fetchQuickRecipes(int maxMinutes) async {
+    final response = await supabase
+        .from('recipes')
+        .select()
+        .eq('status', 'approved')
+        .lte('cookingTime', maxMinutes) // lte = Less Than or Equal to
+        .order('cookingTime', ascending: true);
+
+    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+  }
+
+// 3. Increment View Count
+// Call this whenever a user clicks to view a recipe detail
+  Future<void> incrementViewCount(String recipeId) async {
+    // Use a RPC (Remote Procedure Call) if you want perfect accuracy,
+    // but for now, this simpler update is fine if you refresh the UI
+    try {
+      // Fetch latest count first to be safe
+      final res = await supabase.from('recipes').select('totalViews').eq('id', recipeId).single();
+      int latestViews = res['totalViews'] ?? 0;
+
+      await supabase
+          .from('recipes')
+          .update({'totalViews': latestViews + 1})
+          .eq('id', recipeId);
+    } catch (e) {
+      log("Error incrementing views: $e");
+    }
+  }
+
+  // 4. Search with all your new attributes
+  Future<List<RecipeModel>> searchRecipes({
+    String? query,
+    String? category,
+    String? skillLevel,
+    int? maxMinutes,
+  }) async {
+    var request = supabase.from('recipes').select().eq('status', 'approved');
+
+    if (query != null && query.isNotEmpty) {
+      request = request.ilike('title', '%$query%');
+    }
+    if (category != null && category != 'All Categories') {
+      request = request.contains('category', [category]);
+    }
+    if (skillLevel != null) {
+      request = request.eq('skillLevel', skillLevel);
+    }
+    if (maxMinutes != null) {
+      request = request.lte('cookingTime', maxMinutes);
+    }
+
+    final response = await request.order('totalViews', ascending: false);
+    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
+  }
 
 }
+

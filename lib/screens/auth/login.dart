@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'database_service.dart';
-import 'home_page.dart';
+import '../../main.dart';
+import '../../services/database_service.dart';
+import '../home/home_page.dart';
 import 'registration.dart';
 import 'forgot_password.dart';
 
@@ -39,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
         //  Navigate to HomePage if login is successful
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const AuthGate()),
         );
       }
     } else {
