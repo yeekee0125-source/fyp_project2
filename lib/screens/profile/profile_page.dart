@@ -119,6 +119,7 @@ import 'package:flutter/material.dart';
 import '../../services/database_service.dart';
 import '../auth/login.dart';
 import '../recipe/recipe_list.dart';
+import '../video/my_video_page.dart';
 import 'feedback_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -287,7 +288,10 @@ class _ProfilePageState extends State<ProfilePage> {
               title: "Manage My Video Tutorials",
               color: Colors.orange,
               onTap: () {
-                // Navigator.push(context, MaterialPageRoute(builder: (_) => const MyVideosPage()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyVideosPage())
+                );
               },
             ),
 
