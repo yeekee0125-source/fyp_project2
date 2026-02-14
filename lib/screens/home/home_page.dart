@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../services/database_service.dart';
-import '../../services/search_service.dart';
-import '../../services/video_service.dart'; // Added
-import '../../models/recipe_model.dart';
-import '../../models/video_model.dart';   // Added
+import 'package:fyp_project2/screens/home/search_screen.dart';
+import 'package:fyp_project2/models/recipe_model.dart';
+import 'package:fyp_project2/models/video_model.dart';
+import 'package:fyp_project2/services/database_service.dart';
+import 'package:fyp_project2/services/search_service.dart';
+import 'package:fyp_project2/services/video_service.dart';
 import '../auth/login.dart';
 import '../recipe/view_recipe.dart';
 import '../video/video_player_page.dart';
@@ -18,8 +19,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late TabController _tabController;
   final db = DatabaseService();
-  final searchService = SearchService();
-  final videoService = VideoService(); // Initialize Video Service
+  final videoService = VideoService(); // Added for real data
+  final searchService = SearchService(); // Added for real data
 
   @override
   void initState() {
@@ -41,8 +42,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: const Text('KitchenBuddy',
-            style: TextStyle(color: Color(0xFFE67E22), fontWeight: FontWeight.bold, fontSize: 22)),
+        title: const Text(
+          'KitchenBuddy',
+          style: TextStyle(
+            color: Color(0xFFE67E22),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
@@ -60,26 +67,50 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
+          // 1. Search Bar (Button Mode)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: TextField(
+              readOnly: true,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SearchDiscoveryScreen())
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search recipe or tutorials',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+
+          // 2. Tab Bar
           TabBar(
             controller: _tabController,
             isScrollable: false,
             labelColor: Colors.black,
             unselectedLabelColor: Colors.grey,
             indicatorColor: Colors.orange,
-            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label,
             tabs: const [
               Tab(text: 'Explore'),
               Tab(text: 'Video'),
               Tab(text: 'Popular'),
             ],
           ),
+
+          // 3. Tab Content
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
                 _buildExploreTab(),
-                _buildVideoTab(), // Now using live video data
+                _buildVideoTab(),
                 _buildPopularTab(),
               ],
             ),
@@ -89,15 +120,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 1. EXPLORE: Real recipe data
+  // 1. EXPLORE: Updated to show real recipes from your SearchService
   Widget _buildExploreTab() {
     return FutureBuilder<List<RecipeModel>>(
       future: searchService.searchRecipes(category: 'All Categories'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Colors.orange));
         }
         final recipes = snapshot.data ?? [];
+        if (recipes.isEmpty) {
+          return const Center(child: Text("No recipes found."));
+        }
         return ListView.builder(
           padding: const EdgeInsets.all(15),
           itemCount: recipes.length,
@@ -107,19 +141,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 2. VIDEO: Updated to use VideoService and VideoModel
+  // 2. VIDEO: Updated to use the Stream from Supabase
   Widget _buildVideoTab() {
     return StreamBuilder<List<VideoModel>>(
-      stream: videoService.getVideoStream('All'), // Fetching from the 'videos' table
+      stream: videoService.getVideoStream('All'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Colors.orange));
         }
-
         if (snapshot.hasError) {
-          return Center(child: Text("Error loading videos: ${snapshot.error}"));
+          return Center(child: Text("Error: ${snapshot.error}"));
         }
-
         final videos = snapshot.data ?? [];
 
         if (videos.isEmpty) {
@@ -127,7 +159,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          padding: const EdgeInsets.all(15),
           itemCount: videos.length,
           itemBuilder: (context, index) {
             final video = videos[index];
@@ -137,76 +169,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   context,
                   MaterialPageRoute(
                     builder: (_) => VideoPlayerPage(
-                      videoUrl: video.videoUrl, // Pass URL from Supabase
-                      title: video.title,       // Pass Title from Supabase
+                      videoUrl: video.videoUrl,
+                      title: video.title,
                     ),
                   ),
                 );
               },
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 25),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(
-                      children: [
-                        // Video Thumbnail / Placeholder
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(15),
-                          child: AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: Container(
-                              color: Colors.grey[800],
-                              child: const Center(
-                                child: Icon(Icons.play_circle_fill, color: Colors.white, size: 60),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Level Tag (e.g., "Beginner")
-                        Positioned(
-                          top: 15,
-                          left: 15,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              video.skillLevel,
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Title and Options
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            video.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const Icon(Icons.more_vert, color: Colors.grey),
-                      ],
-                    ),
-                    Text(
-                      video.description,
-                      style: const TextStyle(color: Colors.grey, fontSize: 14),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildVideoCard(video),
             );
           },
         );
@@ -214,26 +183,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 3. POPULAR: Ranking Banners
+  // 3. POPULAR: Stays as your previous banners
   Widget _buildPopularTab() {
     return ListView(
       padding: const EdgeInsets.all(15),
       children: [
-        _buildRankBanner("Ranked by views"),
-        _buildRankBanner("Ranked by likes"),
-        _buildRankBanner("Ranked by followers"),
+        _buildPopularBanner("Ranked by views"),
+        _buildPopularBanner("Ranked by likes"),
+        _buildPopularBanner("Ranked by followers"),
       ],
     );
   }
 
-  // --- UI COMPONENTS ---
+  // --- REFINED WIDGET HELPERS ---
 
   Widget _buildStandardRecipeCard(RecipeModel recipe) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ListTile(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewRecipePage(recipe: recipe))),
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ViewRecipePage(recipe: recipe))
+        ),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Container(
@@ -241,19 +213,79 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             color: Colors.orange[50],
             child: (recipe.imagePath != null && recipe.imagePath!.isNotEmpty)
                 ? Image.network(recipe.imagePath!, fit: BoxFit.cover)
-                : const Icon(Icons.fastfood, color: Colors.orange),
+                : const Icon(Icons.restaurant_menu, color: Colors.orange),
           ),
         ),
         title: Text(recipe.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("${recipe.cookingTime}m • ${recipe.skillLevel}"),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right, size: 16),
       ),
     );
   }
 
-  Widget _buildRankBanner(String label) {
+  Widget _buildVideoCard(VideoModel video) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  color: Colors.black87,
+                  child: const Center(
+                    child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 60),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                left: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20)
+                  ),
+                  child: Text(
+                      video.skillLevel,
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                  child: Text(
+                      video.title,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown)
+                  )
+              ),
+              const Icon(Icons.more_vert, color: Colors.grey),
+            ],
+          ),
+          Text(
+            video.description,
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPopularBanner(String text) {
     return Container(
-      height: 100,
+      height: 120,
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -261,23 +293,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
       child: Center(
         child: Text(
-          label,
+          text,
           style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: TextField(
-        readOnly: true,
-        decoration: InputDecoration(
-          hintText: 'Search recipe or tutorials',
-          prefixIcon: const Icon(Icons.search),
-          filled: true, fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
         ),
       ),
     );

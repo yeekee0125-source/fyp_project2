@@ -35,10 +35,24 @@ class _VideoUploadPageState extends State<VideoUploadPage> {
         description: _descController.text,
         skillLevel: _selectedLevel,
       );
-      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        // 1. Show the success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("🚀 Video uploaded successfully!"),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // 2. Go back
+        Navigator.pop(context);
+      }
     } catch (e) {
       setState(() => _isUploading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+      );
     }
   }
 

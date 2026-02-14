@@ -30,6 +30,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="io.supabase.kitchenbuddy" android:host="login-callback" />
+                <data android:scheme="io.supabase.flutter" android:host="reset-password" />
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>

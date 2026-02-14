@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fyp_project2/screens/auth/login.dart';
+import 'package:fyp_project2/screens/auth/reset_password.dart';
 import 'package:fyp_project2/screens/profile/profile_page.dart';
 import 'package:fyp_project2/screens/recipe/upload_selection_screen.dart';
 import 'package:fyp_project2/screens/user_message_page.dart';
@@ -7,6 +8,7 @@ import 'package:fyp_project2/services/database_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/home/home_page.dart';
+import 'dart:async';
 
 // Keys for navigation and snackbars
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -48,8 +50,40 @@ class KitchenBuddyApp extends StatelessWidget {
 }
 
 /// Decision maker: Shows Login, Admin Dashboard, or User Home
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for Auth Events (like clicking the reset link)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+
+      if (event == AuthChangeEvent.passwordRecovery) {
+        // When the link is clicked, push the Change Password screen
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel(); // Always clean up listeners
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

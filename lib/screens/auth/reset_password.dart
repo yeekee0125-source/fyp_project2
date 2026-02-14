@@ -15,6 +15,17 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   bool _isLoading = false;
 
   void _updatePassword() async {
+
+    final user = Supabase.instance.client.auth.currentUser;
+    print("Current User ID: ${user?.id}");
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: No active session. Deep link failed.')),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);

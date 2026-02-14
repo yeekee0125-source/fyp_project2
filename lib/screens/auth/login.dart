@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../main.dart';
@@ -5,6 +7,7 @@ import '../../services/database_service.dart';
 import '../home/home_page.dart';
 import 'registration.dart';
 import 'forgot_password.dart';
+import 'reset_password.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -22,6 +25,38 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
   final bool _obscurePassword = true; // To toggle password visibility
+
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  //ADD INITSTATE TO LISTEN FOR THE LINK
+  @override
+  void initState() {
+    super.initState();
+
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+
+      // If the link is a Password Recovery link...
+      if (event == AuthChangeEvent.passwordRecovery) {
+        if (mounted) {
+          // ...Navigate specifically to the Change Password Page
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChangePasswordPage()),
+          );
+        }
+      }
+    });
+  }
+
+  //ADD DISPOSE TO CLEAN UP
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
