@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'database_service.dart';
 
 class AddRecipePage extends StatefulWidget {
-  final RecipeModel? recipe; // If this exists, we are UPDATING
+  final RecipeModel? recipe;
   const AddRecipePage({super.key, this.recipe});
 
   @override
@@ -20,29 +20,17 @@ class _AddRecipePageState extends State<AddRecipePage> {
   final _servingCtrl = TextEditingController();
   final _cookingTimeCtrl = TextEditingController();
 
-  // NEW: Category Logic
   final _otherCategoryCtrl = TextEditingController();
   String? _selectedCategory;
   bool _isOtherSelected = false;
+
   final List<String> _hardcodedCategories = [
-    'All Categories',
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Western',
-    'Japanese',
-    'Korean',
-    'Chinese',
-    'Malay',
-    'Dessert',
-    'Healthy',
-    'Vegan',
-    'Seafood',
-    'Other'
+    'All Categories', 'Breakfast', 'Lunch', 'Dinner', 'Western',
+    'Japanese', 'Korean', 'Chinese', 'Malay', 'Dessert',
+    'Healthy', 'Vegan', 'Seafood', 'Other'
   ];
 
   String? _selectedSkillLevel;
-
   final db = DatabaseService();
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
@@ -58,7 +46,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
       _cookingTimeCtrl.text = widget.recipe!.cookingTime.toString();
       _selectedSkillLevel = widget.recipe!.skillLevel;
 
-      // Handle Category pre-filling
       if (widget.recipe!.category.isNotEmpty) {
         String primaryCat = widget.recipe!.category.first;
         if (_hardcodedCategories.contains(primaryCat)) {
@@ -95,14 +82,11 @@ class _AddRecipePageState extends State<AddRecipePage> {
         if (cloudUrl != null) finalImagePath = cloudUrl;
       }
 
-      // Logic to get Category String from Dropdown or "Other" text field
       String categoryValue = _isOtherSelected
           ? _otherCategoryCtrl.text.trim()
           : (_selectedCategory ?? 'Uncategorized');
 
-      // Convert to List<String> to keep teammate's model happy
       List<String> categories = [categoryValue].where((e) => e.isNotEmpty).toList();
-
       final String currentUid = db.supabase.auth.currentUser?.id ?? '';
 
       final recipe = RecipeModel(
@@ -116,10 +100,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
         createdOn: widget.recipe?.createdOn ?? DateTime.now(),
         cookingTime: int.tryParse(_cookingTimeCtrl.text) ?? 0,
         skillLevel: _selectedSkillLevel ?? 'Beginner',
-        totalViews: widget.recipe?.totalViews ?? 0,
         userId: widget.recipe?.userId ?? currentUid,
-
-      );
+              );
 
       if (widget.recipe == null) {
         await db.addRecipe(recipe);
@@ -128,7 +110,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
       }
 
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // Pop loading
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -143,11 +125,13 @@ class _AddRecipePageState extends State<AddRecipePage> {
       Navigator.pop(context, true);
 
     } catch (e) {
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context); // Pop loading
       log('Error saving recipe: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red));
     }
   }
+
+  // ... Rest of the UI building remains the same, but views logic is removed from logic ...
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -169,106 +153,116 @@ class _AddRecipePageState extends State<AddRecipePage> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 120, width: 120,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFE5A5),
-                  borderRadius: BorderRadius.circular(15),
-                  image: _selectedImage != null
-                      ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover)
-                      : (widget.recipe?.imagePath != null
-                      ? DecorationImage(image: NetworkImage(widget.recipe!.imagePath!), fit: BoxFit.cover)
-                      : null),
-                ),
-                child: (_selectedImage == null && widget.recipe?.imagePath == null)
-                    ? const Icon(Icons.image_outlined, size: 50)
-                    : null,
-              ),
-            ),
+            _buildImagePicker(),
             const SizedBox(height: 20),
-
             _buildTextField(label: 'Recipe Title', controller: _titleCtrl),
             const SizedBox(height: 15),
-
-            // NEW Category Selection Logic
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Category", style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 5),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: InputDecoration(
-                    filled: true, fillColor: const Color(0xFFFFE5A5),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
-                  ),
-                  items: _hardcodedCategories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedCategory = val;
-                      _isOtherSelected = (val == 'Other');
-                    });
-                  },
-                ),
-              ],
-            ),
-            if (_isOtherSelected) ...[
-              const SizedBox(height: 10),
-              _buildTextField(label: 'Enter Custom Category', controller: _otherCategoryCtrl),
-            ],
-
+            _buildCategorySection(),
             const SizedBox(height: 15),
             _buildTextField(label: 'Ingredients', controller: _ingredientsCtrl, maxLines: 3),
             const SizedBox(height: 15),
             _buildTextField(label: 'Instructions', controller: _stepsCtrl, maxLines: 3),
             const SizedBox(height: 15),
-
-            Row(
-              children: [
-                Expanded(child: _buildTextField(label: 'Time (mins)', controller: _cookingTimeCtrl)),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Skill Level", style: TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 5),
-                      DropdownButtonFormField<String>(
-                        value: _selectedSkillLevel,
-                        items: ['Beginner', 'Intermediate', 'Expert']
-                            .map((level) => DropdownMenuItem(value: level, child: Text(level)))
-                            .toList(),
-                        onChanged: (val) => setState(() => _selectedSkillLevel = val),
-                        decoration: InputDecoration(
-                          filled: true, fillColor: const Color(0xFFFFE5A5),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            _buildTimeAndSkillRow(),
             const SizedBox(height: 15),
             _buildTextField(label: 'Serving Size', controller: _servingCtrl),
             const SizedBox(height: 30),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildButton(text: widget.recipe == null ? 'Add Recipe' : 'Update', onTap: _saveRecipe),
-                _buildButton(text: 'Cancel', onTap: () => Navigator.pop(context)),
-              ],
-            ),
+            _buildActionButtons(),
           ],
         ),
       ),
     );
   }
 
-  // Same Reusable Widgets...
+  // Extracted Helper Widgets for cleaner code
+  Widget _buildImagePicker() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 120, width: 120,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE5A5),
+          borderRadius: BorderRadius.circular(15),
+          image: _selectedImage != null
+              ? DecorationImage(image: FileImage(_selectedImage!), fit: BoxFit.cover)
+              : (widget.recipe?.imagePath != null
+              ? DecorationImage(image: NetworkImage(widget.recipe!.imagePath!), fit: BoxFit.cover)
+              : null),
+        ),
+        child: (_selectedImage == null && widget.recipe?.imagePath == null)
+            ? const Icon(Icons.image_outlined, size: 50)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildCategorySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Category", style: TextStyle(color: Colors.grey)),
+        const SizedBox(height: 5),
+        DropdownButtonFormField<String>(
+          value: _selectedCategory,
+          decoration: InputDecoration(
+            filled: true, fillColor: const Color(0xFFFFE5A5),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
+          ),
+          items: _hardcodedCategories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+          onChanged: (val) {
+            setState(() {
+              _selectedCategory = val;
+              _isOtherSelected = (val == 'Other');
+            });
+          },
+        ),
+        if (_isOtherSelected) ...[
+          const SizedBox(height: 10),
+          _buildTextField(label: 'Enter Custom Category', controller: _otherCategoryCtrl),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTimeAndSkillRow() {
+    return Row(
+      children: [
+        Expanded(child: _buildTextField(label: 'Time (mins)', controller: _cookingTimeCtrl)),
+        const SizedBox(width: 15),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Skill Level", style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 5),
+              DropdownButtonFormField<String>(
+                value: _selectedSkillLevel,
+                items: ['Beginner', 'Intermediate', 'Expert']
+                    .map((level) => DropdownMenuItem(value: level, child: Text(level)))
+                    .toList(),
+                onChanged: (val) => setState(() => _selectedSkillLevel = val),
+                decoration: InputDecoration(
+                  filled: true, fillColor: const Color(0xFFFFE5A5),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildButton(text: widget.recipe == null ? 'Add Recipe' : 'Update', onTap: _saveRecipe),
+        _buildButton(text: 'Cancel', onTap: () => Navigator.pop(context)),
+      ],
+    );
+  }
+
   Widget _buildTextField({required String label, required TextEditingController controller, int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -41,24 +41,24 @@ class DatabaseService {
      ''');
     log('Users table created');
 
+
     await db.execute('''
-      CREATE TABLE recipes(
-      id TEXT PRIMARY KEY,
-      title TEXT,
-      ingredients TEXT,
-      steps TEXT,
-      category TEXT,
-      servings INTEGER,
-      imagePath TEXT,
-      status TEXT,
-      created_by TEXT,
-      createdOn DATETIME DEFAULT CURRENT_TIMESTAMP,
-      cookingTime INTEGER,
-      skillLevel TEXT,
-      totalViews INTEGER,
-      user_id TEXT
+  CREATE TABLE recipes(
+  id TEXT PRIMARY KEY,
+  title TEXT,
+  ingredients TEXT,
+  steps TEXT,
+  category TEXT,
+  servings INTEGER,
+  imagePath TEXT,
+  status TEXT,
+  created_by TEXT,
+  createdOn DATETIME DEFAULT CURRENT_TIMESTAMP,
+  cookingTime INTEGER,
+  skillLevel TEXT,
+  user_id TEXT
 )
-    ''');
+''');
     log('Recipes table created');
   }
 
@@ -236,7 +236,8 @@ class DatabaseService {
     );
   }
 
-  // RECIPE CRUD (SUPABASE + SQLITE) //jx change to no sqlite
+  // RECIPE CRUD (SUPABASE + SQLITE)
+  // jx change to no sqlite
   // CREATE
   Future<void> addRecipe(RecipeModel recipe) async {
     final user = supabase.auth.currentUser;
@@ -401,18 +402,6 @@ class DatabaseService {
     await supabase.from('recipes').update({'status': 'rejected'}).eq('id', recipeId);
   }
 
-  //jx
-  // 1. Fetch Top Trending (Sort by Views/Likes)
-  Future<List<RecipeModel>> fetchTrendingRecipes() async {
-    final response = await supabase
-        .from('recipes')
-        .select()
-        .eq('status', 'approved')
-        .order('totalViews', ascending: false) // Most viewed first
-        .limit(10);
-
-    return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
-  }
 
 // 2. Fetch Quick Meals (Filtered by cookingTime)
   Future<List<RecipeModel>> fetchQuickRecipes(int maxMinutes) async {
@@ -426,24 +415,6 @@ class DatabaseService {
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
   }
 
-// 3. Increment View Count
-// Call this whenever a user clicks to view a recipe detail
-  Future<void> incrementViewCount(String recipeId) async {
-    // Use a RPC (Remote Procedure Call) if you want perfect accuracy,
-    // but for now, this simpler update is fine if you refresh the UI
-    try {
-      // Fetch latest count first to be safe
-      final res = await supabase.from('recipes').select('totalViews').eq('id', recipeId).single();
-      int latestViews = res['totalViews'] ?? 0;
-
-      await supabase
-          .from('recipes')
-          .update({'totalViews': latestViews + 1})
-          .eq('id', recipeId);
-    } catch (e) {
-      log("Error incrementing views: $e");
-    }
-  }
 
   // 4. Search with all your new attributes
   Future<List<RecipeModel>> searchRecipes({
@@ -467,7 +438,7 @@ class DatabaseService {
       request = request.lte('cookingTime', maxMinutes);
     }
 
-    final response = await request.order('totalViews', ascending: false);
+    final response = await request.order('createdOn', ascending: false);
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
   }
 
