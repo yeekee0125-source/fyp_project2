@@ -84,16 +84,16 @@ class VideoService {
       rethrow;
     }
   }
-  Future<void> updateVideoDetails(String videoId, String newTitle, String newDesc) async {
+  Future<void> updateVideoDetails(String videoId, String newTitle, String newDesc, String newLevel) async {
     await _supabase.from('videos').update({
       'title': newTitle,
       'description': newDesc,
+      'skill_level': newLevel, // Add this line
     }).eq('id', videoId);
   }
 
   Stream<List<VideoModel>> getMyVideosStream() {
     final userId = _supabase.auth.currentUser?.id;
-
     if (userId == null) return Stream.value([]);
 
     return _supabase

@@ -176,6 +176,13 @@ class DatabaseService {
     );
   }
 
+  // UPDATE PASSWORD
+  Future<void> updatePassword(String newPassword) async {
+    await supabase.auth.updateUser(
+      UserAttributes(password: newPassword.trim()),
+    );
+  }
+
   // ---------- PROFILE MANAGEMENT ----------
   // GET CURRENT USER DATA
   Future<Map<String, dynamic>?> getCurrentUserProfile() async {

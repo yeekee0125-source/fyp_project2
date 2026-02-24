@@ -105,21 +105,79 @@ class _MyVideosPageState extends State<MyVideosPage> {
   // UPDATE LOGIC
   void _showEditDialog(VideoModel video) {
     final titleController = TextEditingController(text: video.title);
+    String selectedLevel = video.skillLevel;
+    bool isUpdating = false; // Local state for the loading spinner
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Edit Title"),
-        content: TextField(controller: titleController),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () async {
-              await _videoService.updateVideoDetails(video.id, titleController.text, video.description);
-              if (mounted) Navigator.pop(context);
-            },
-            child: const Text("Save"),
-          )
-        ],
+      barrierDismissible: false, // Prevent closing while saving
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text("Edit Tutorial"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: "Title"),
+                  enabled: !isUpdating,
+                ),
+                const SizedBox(height: 20),
+                DropdownButtonFormField<String>(
+                  value: selectedLevel,
+                  decoration: const InputDecoration(labelText: "Skill Level"),
+                  items: ['Beginner', 'Intermediate', 'Advanced']
+                      .map((level) => DropdownMenuItem(value: level, child: Text(level)))
+                      .toList(),
+                  onChanged: isUpdating ? null : (value) {
+                    setDialogState(() => selectedLevel = value!);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isUpdating ? null : () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: isUpdating ? null : () async {
+                  setDialogState(() => isUpdating = true); // Start loading
+
+                  try {
+                    await _videoService.updateVideoDetails(
+                      video.id,
+                      titleController.text,
+                      video.description,
+                      selectedLevel,
+                    );
+
+                    if (mounted) {
+                      Navigator.pop(context); // Close dialog
+                      // Show success message
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Tutorial updated successfully!"),
+                          backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    setDialogState(() => isUpdating = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+                    );
+                  }
+                },
+                child: isUpdating
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text("Save Changes"),
+              )
+            ],
+          );
+        },
       ),
     );
   }
