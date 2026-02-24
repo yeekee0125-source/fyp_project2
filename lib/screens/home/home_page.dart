@@ -8,6 +8,7 @@ import 'package:fyp_project2/services/video_service.dart';
 import '../auth/login.dart';
 import '../recipe/view_recipe.dart';
 import '../video/video_player_page.dart';
+import 'notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,6 +52,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
         actions: [
+          // Added Notification Icon
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () async {
