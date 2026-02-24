@@ -246,15 +246,34 @@ class _CommentSheetState extends State<CommentSheet> {
                             backgroundColor: Colors.orange,
                             child: Icon(Icons.person, color: Colors.white)
                         ),
-                        title: Text(
-                            "$displayName • $timeStr",
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isMe ? Colors.orange : Colors.brown
-                            )
+                        title: Builder(
+                          builder: (context) {
+                            final bool isMe = comment['user_id'] == _service.currentUserId;
+                            final String displayName = isMe ? "You" : (comment['user_name'] ?? "Chef");
+
+                            // --- DATE FORMATTING LOGIC ---
+                            String fullDateTimeStr = "Just now";
+                            if (comment['created_at'] != null) {
+                              final DateTime localDateTime = DateTime.parse(comment['created_at']).toLocal();
+
+                              // This pattern gives you: Feb 24, 2026 • 4:19 PM
+                              fullDateTimeStr = DateFormat('MMM d, yyyy • h:mm a').format(localDateTime);
+                            }
+
+                            return Text(
+                                "$displayName • $fullDateTimeStr",
+                                style: TextStyle(
+                                    fontSize: 11, // Slightly smaller to fit the longer date
+                                    fontWeight: FontWeight.bold,
+                                    color: isMe ? Colors.orange : Colors.brown
+                                )
+                            );
+                          },
                         ),
-                        subtitle: Text(comment['content'] ?? ""),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(comment['content'] ?? "", style: const TextStyle(fontSize: 14)),
+                        ),
                         trailing: isMe ? IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                           onPressed: () async {
