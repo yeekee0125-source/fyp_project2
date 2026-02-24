@@ -31,7 +31,8 @@ class SearchService {
       request = request.lte('cookingTime', maxTime);
     }
 
-    final response = await request.order('totalViews', ascending: false);    return response.map<RecipeModel>((json) => RecipeModel.fromJson(json)).toList();
+    final response = await request.order('createdOn', ascending: false);
+    return response.map<RecipeModel>((json) => RecipeModel.fromJson(json)).toList();
   }
 
   Future<List<RecipeModel>> getCustomCategories({required List<String> excludeList}) async {
@@ -45,7 +46,8 @@ class SearchService {
       final response = await _supabase
           .from('recipes')
           .select()
-          .eq('status', 'approved');
+          .eq('status', 'approved')
+          .order('createdOn', ascending: false);
 
       final allRecipes = (response as List).map((json) => RecipeModel.fromJson(json)).toList();
 

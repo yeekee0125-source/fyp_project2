@@ -10,7 +10,6 @@ class RecipeModel {
   final DateTime createdOn;
   final int cookingTime;
   final String? skillLevel;
-  final int totalViews;
   final String userId;
 
   RecipeModel({
@@ -25,7 +24,6 @@ class RecipeModel {
     required this.createdOn,
     this.cookingTime = 0,
     this.skillLevel,
-    this.totalViews = 0,
     required this.userId,
   });
 
@@ -46,7 +44,6 @@ class RecipeModel {
           : DateTime.now(),
       cookingTime: json['cookingTime'] ?? 0,
       skillLevel: json['skillLevel']?.toString() ?? 'Beginner',
-      totalViews: json['totalViews'] ?? 0,
       userId: json['user_id']?.toString() ?? '', // Linked to creator
     );
   }
@@ -63,7 +60,6 @@ class RecipeModel {
       'createdOn': createdOn.toIso8601String(),
       'cookingTime': cookingTime,
       'skillLevel': skillLevel,
-      'totalViews': totalViews,
       'user_id': userId,
     };
   }

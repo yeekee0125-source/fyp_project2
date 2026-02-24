@@ -90,12 +90,10 @@ class ViewRecipePage extends StatelessWidget {
       future: service.getCreatorProfile(recipe.userId),
       builder: (context, snapshot) {
         final profile = snapshot.data;
-        // Display 'name' from DB or default to 'Chef'
         final String displayName = profile?['name'] ?? "Chef";
 
         return Row(
           children: [
-            // Simplified: Replaced avatar with a clean account icon
             const Icon(Icons.account_circle, size: 45, color: Colors.brown),
             const SizedBox(width: 12),
             Column(
@@ -105,7 +103,6 @@ class ViewRecipePage extends StatelessWidget {
                     displayName,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF5D4037))
                 ),
-                // Real-time Follower Count
                 StreamBuilder<int>(
                   stream: service.getFollowerCountStream(recipe.userId),
                   builder: (context, countSnapshot) {
@@ -116,7 +113,6 @@ class ViewRecipePage extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            // Only show follow button if it's not the user's own recipe
             if (!isMe)
               StreamBuilder<bool>(
                 stream: service.isFollowingStream(recipe.userId),
@@ -157,7 +153,6 @@ class ViewRecipePage extends StatelessWidget {
           _infoItem(Icons.access_time, "${recipe.cookingTime}m", "Time"),
           _infoItem(Icons.people_outline, "${recipe.servings}", "Servings"),
           _infoItem(Icons.bar_chart, recipe.skillLevel ?? "Easy", "Level"),
-          _infoItem(Icons.visibility_outlined, "${recipe.totalViews}", "Views"),
         ],
       ),
     );
