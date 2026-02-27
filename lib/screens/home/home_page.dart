@@ -131,7 +131,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 1. EXPLORE: Updated to show real recipes from your SearchService
+  // EXPLORE
   Widget _buildExploreTab() {
     return FutureBuilder<List<RecipeModel>>(
       future: searchService.searchRecipes(category: 'All Categories'),
@@ -139,16 +139,109 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: Colors.orange));
         }
-        final recipes = snapshot.data ?? [];
-        if (recipes.isEmpty) {
+
+        final allRecipes = snapshot.data ?? [];
+
+        if (allRecipes.isEmpty) {
           return const Center(child: Text("No recipes found."));
         }
-        return ListView.builder(
-          padding: const EdgeInsets.all(15),
-          itemCount: recipes.length,
-          itemBuilder: (context, index) => _buildStandardRecipeCard(recipes[index]),
+
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // AI SECTION
+              _buildAISection(allRecipes),
+
+              const SizedBox(height: 20),
+
+              //ALL OTHER USERS SECTION
+              _buildExploreList(allRecipes),
+            ],
+          ),
         );
       },
+    );
+  }
+
+
+  Widget _buildAISection(List<RecipeModel> recipes) {
+
+    // Simple AI logic: recommend quick beginner recipes
+    final aiRecipes = recipes
+        .where((r) => r.skillLevel == 'Beginner')
+        .take(5)
+        .toList();
+
+    if (aiRecipes.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 15),
+          child: Text(
+            "AI Picks For You",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.orange,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 180,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            itemCount: aiRecipes.length,
+            itemBuilder: (context, index) {
+              final recipe = aiRecipes[index];
+              return Container(
+                width: 150,
+                margin: const EdgeInsets.only(right: 12),
+                child: _buildStandardRecipeCard(recipe),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExploreList(List<RecipeModel> recipes) {
+
+    final currentUserId = db.supabase.auth.currentUser?.id;
+
+    final otherUserRecipes =
+    recipes.where((r) => r.userId != currentUserId).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 15),
+          child: Text(
+            "Explore Other Users",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(15),
+          itemCount: otherUserRecipes.length,
+          itemBuilder: (context, index) =>
+              _buildStandardRecipeCard(otherUserRecipes[index]),
+        ),
+      ],
     );
   }
 

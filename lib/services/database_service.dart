@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'dart:io';
 import '../models/recipe_model.dart';
 import 'package:flutter/foundation.dart';
+import 'notification_service.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -251,7 +252,6 @@ class DatabaseService {
     await supabase.from('recipes').insert(data);
   }
 
-
   // READ (ONLINE FIRST, FALLBACK OFFLINE)
   Future<List<RecipeModel>> fetchRecipes() async {
     try {
@@ -269,25 +269,49 @@ class DatabaseService {
     }
   }
 
-  //update
-  Future<void> updateRecipe(RecipeModel recipe) async {
-    await supabase.from('recipes').update(recipe.toMap()).eq('id', recipe.id);
 
-    final db = await database;
-    await db.update(
-      'recipes',
-      recipe.toMap(),
-      where: 'id = ?',
-      whereArgs: [recipe.id],
-    );
+  // Update Recipe (Both Supabase and SQLite)
+  Future<void> updateRecipe(RecipeModel recipe) async {
+    try {
+      // 1. Update Supabase (This accepts the List natively)
+      await supabase.from('recipes').update(recipe.toMap()).eq('id', recipe.id);
+
+      // 2. Prepare data for SQLite
+      final db = await database;
+
+      // Create a copy of the map so we don't accidentally break the Supabase format
+      final Map<String, dynamic> sqliteData = Map<String, dynamic>.from(recipe.toMap());
+
+      // Convert the List (e.g., ['Dessert', 'Baking']) into a String (e.g., 'Dessert,Baking')
+      sqliteData['category'] = recipe.category.join(',');
+
+      // 3. Update SQLite safely
+      await db.update(
+        'recipes',
+        sqliteData,
+        where: 'id = ?',
+        whereArgs: [recipe.id],
+      );
+    } catch (e) {
+      print('Error updating recipe: $e');
+      rethrow;
+    }
   }
 
-  //delete
+  // Delete Recipe (Both Supabase and SQLite)
   Future<void> deleteRecipe(String id) async {
-    await supabase.from('recipes').delete().eq('id', id);
+    try {
+      // 1. Delete from Supabase
+      await supabase.from('recipes').delete().eq('id', id);
 
-    final db = await database;
-    await db.delete('recipes', where: 'id = ?', whereArgs: [id]);
+      // 2. Delete from local SQLite
+      final db = await database;
+      await db.delete('recipes', where: 'id = ?', whereArgs: [id]);
+
+    } catch (e) {
+      print('Error deleting recipe: $e');
+      rethrow;
+    }
   }
 
   //filter by category(jx updated)
@@ -345,14 +369,62 @@ class DatabaseService {
     required String reportedUserId,
     required String reason,
   }) async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
+    final currentUser = supabase.auth.currentUser;
 
-    await supabase.from('reported_users').insert({
+    if (currentUser == null) {
+      throw Exception("User not logged in");
+    }
+
+    if (currentUser.id == reportedUserId) {
+      throw Exception("You cannot report yourself");
+    }
+
+    await supabase.from('reports').insert({
       'reported_user_id': reportedUserId,
-      'reporter_id': user.id,
+      'reporter_user_id': currentUser.id,
       'reason': reason,
     });
+  }
+
+
+  Future<List<Map<String, dynamic>>> fetchReportedUsers() async {
+    final response = await supabase
+        .from('reports')
+        .select('''
+        id,
+        reason,
+        status,
+        reported_user_id,
+        users:reported_user_id (email, name)
+      ''')
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<void> updateReportStatus(String reportId, String status) async {
+    final report = await supabase
+        .from('reports')
+        .select('reported_user_id')
+        .eq('id', reportId)
+        .single();
+
+    final reportedUserId = report['reported_user_id'];
+
+    // Update report status
+    await supabase
+        .from('reports')
+        .update({'status': status})
+        .eq('id', reportId);
+
+    // If banning user
+    if (status == 'banned') {
+      await supabase
+          .from('users')
+          .update({'role': 'banned'})
+          .eq('id', reportedUserId);
+    }
   }
 
   Future<List<RecipeModel>> fetchMyRecipes() async {
@@ -362,27 +434,11 @@ class DatabaseService {
     final response = await supabase
         .from('recipes')
         .select()
-        .eq('user_id', user.id) // CHANGED from 'created_by' to 'user_id'
+        .eq('user_id', user.id)
+        .neq('status', 'rejected')
         .order('createdOn', ascending: false);
 
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
-  }
-
-
-  Future<List<Map<String, dynamic>>> fetchReportedUsers() async {
-    if (!await isAdmin()) return [];
-
-    return await supabase
-        .from('reported_users')
-        .select('id, reason, status, created_at, users!reported_user_id(name, email)')
-        .order('created_at', ascending: false);
-  }
-
-  Future<void> updateReportStatus(String reportId, String status) async {
-    await supabase
-        .from('reported_users')
-        .update({'status': status})
-        .eq('id', reportId);
   }
 
   Future<List<RecipeModel>> fetchPendingRecipes() async {
@@ -394,16 +450,61 @@ class DatabaseService {
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
   }
 
+  //ADMIN SIDE TO MANAGE RECIPE
+  //approve recipe
   Future<void> approveRecipe(String recipeId) async {
-    await supabase.from('recipes').update({'status': 'approved'}).eq('id', recipeId);
+    await supabase
+        .from('recipes')
+        .update({'status': 'approved'})
+        .eq('id', recipeId);
   }
 
+  Future<RecipeModel?> getRecipeById(String recipeId) async {
+    try {
+      final data = await supabase
+          .from('recipes')
+          .select()
+          .eq('id', recipeId)
+          .single();
+      return RecipeModel.fromJson(data);
+    } catch (e) {
+      log('Error fetching recipe by ID: $e');
+      return null;
+    }
+  }
+
+  //reject the recipe
   Future<void> rejectRecipe(String recipeId) async {
-    await supabase.from('recipes').update({'status': 'rejected'}).eq('id', recipeId);
+    try {
+      // Fetch the recipe to find out WHO created it
+      final recipeData = await supabase
+          .from('recipes')
+          .select('user_id, title')
+          .eq('id', recipeId)
+          .single();
+
+      final creatorId = recipeData['user_id'];
+      final recipeTitle = recipeData['title'];
+
+      // Update the recipe status to rejected
+      await supabase.from('recipes').update({'status': 'rejected'}).eq('id', recipeId);
+
+      // Send the rejection notification to the creator
+      if (creatorId != null && creatorId.toString().isNotEmpty) {
+        await NotificationService().createNotification(
+          targetUserId: creatorId.toString(),
+          title: 'Recipe Update ❌',
+          message: 'Unfortunately, your recipe "$recipeTitle" was not approved.',
+          recipeId: recipeId, // Optional: keeps the link so they can still view what got rejected
+        );
+      }
+    } catch (e) {
+      log('Error rejecting recipe: $e');
+    }
   }
 
 
-// 2. Fetch Quick Meals (Filtered by cookingTime)
+//Fetch Quick Meals (Filtered by cookingTime)
   Future<List<RecipeModel>> fetchQuickRecipes(int maxMinutes) async {
     final response = await supabase
         .from('recipes')
@@ -416,7 +517,7 @@ class DatabaseService {
   }
 
 
-  // 4. Search with all your new attributes
+  //Search with all your new attributes
   Future<List<RecipeModel>> searchRecipes({
     String? query,
     String? category,

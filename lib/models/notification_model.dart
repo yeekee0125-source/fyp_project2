@@ -4,13 +4,15 @@ class NotificationModel {
   final String message;
   final DateTime createdAt;
   final bool isRead;
+  final String? recipeId;
 
   NotificationModel({
     required this.id,
     required this.title,
     required this.message,
     required this.createdAt,
-    this.isRead = false,
+    required this.isRead,
+    this.recipeId,
   });
 
   factory NotificationModel.fromMap(Map<String, dynamic> map) {
@@ -18,8 +20,11 @@ class NotificationModel {
       id: map['id'].toString(),
       title: map['title'] ?? '',
       message: map['message'] ?? '',
-      createdAt: DateTime.parse(map['created_at']),
-      isRead: map['is_read'] ?? false,
+      createdAt: map['created_at'] != null
+          ? DateTime.parse(map['created_at'])
+          : DateTime.now(),
+      isRead: map['is_read'] == true,
+      recipeId: map['recipe_id']?.toString(),
     );
   }
 }

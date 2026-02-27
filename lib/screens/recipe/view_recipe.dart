@@ -2,11 +2,91 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/recipe_model.dart';
 import '../../services/interaction_service.dart';
+import '../../services/database_service.dart';
 import '../../widgets/recipe_interaction_bar.dart';
 
 class ViewRecipePage extends StatelessWidget {
   final RecipeModel recipe;
   const ViewRecipePage({super.key, required this.recipe});
+
+  // The Report User Dialog Function
+  void _showReportUserDialog(BuildContext context, String reportedUserId) {
+    final TextEditingController reasonController = TextEditingController();
+    final db = DatabaseService();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Report User', style: TextStyle(color: Colors.red)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please provide a reason for reporting this user:'),
+              const SizedBox(height: 10),
+              TextField(
+                controller: reasonController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Inappropriate content, spam, etc.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) return;
+
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(
+                    child: CircularProgressIndicator(color: Colors.orange),
+                  ),
+                );
+
+                try {
+                  // Call your database service
+                  await db.reportUser(
+                    reportedUserId: reportedUserId,
+                    reason: reason,
+                  );
+
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); // Close loading
+                    Navigator.pop(context); // Close dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Report submitted successfully. Our team will review it.'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); // Close loading
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to send report: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +100,14 @@ class ViewRecipePage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.brown),
+        actions: [
+          // Only show the report button if it's NOT the current user's recipe
+          if (!isOwnRecipe)
+            IconButton(
+              icon: const Icon(Icons.report_problem_outlined, color: Colors.redAccent),
+              onPressed: () => _showReportUserDialog(context, recipe.userId),
+            ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -36,8 +124,8 @@ class ViewRecipePage extends StatelessWidget {
 
           // 3. RECIPE TITLE
           Text(
-              recipe.title,
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF5D4037))
+            recipe.title,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF5D4037)),
           ),
 
           const SizedBox(height: 10),
@@ -100,8 +188,8 @@ class ViewRecipePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                    displayName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF5D4037))
+                  displayName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF5D4037)),
                 ),
                 StreamBuilder<int>(
                   stream: service.getFollowerCountStream(recipe.userId),

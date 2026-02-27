@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/notification_model.dart';
+import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
-
+import '../recipe/view_recipe.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -13,6 +14,8 @@ class NotificationPage extends StatefulWidget {
 
 class _NotificationPageState extends State<NotificationPage> {
   final NotificationService _notificationService = NotificationService();
+
+  List<NotificationModel> _notifications = [];
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +49,15 @@ class _NotificationPageState extends State<NotificationPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text("Error loading notifications: ${snapshot.error}"),
+              child: Text("❌ Error: ${snapshot.error}"),
             );
           }
 
-          final notifications = snapshot.data ?? [];
+          if (snapshot.hasData) {
+            _notifications = snapshot.data!;
+          }
+
+          final notifications = _notifications;
 
           if (notifications.isEmpty) {
             return const Center(
@@ -66,7 +73,8 @@ class _NotificationPageState extends State<NotificationPage> {
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               final notification = notifications[index];
-              return _buildNotificationCard(notification);
+              // 🔥 Fixed: Passing context to the card builder
+              return _buildNotificationCard(notification, context);
             },
           );
         },
@@ -74,85 +82,129 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  Widget _buildNotificationCard(NotificationModel notification) {
-    // Formatting the date nicely (e.g., "Today, 10:30 AM" or "Oct 24")
-    final timeString = DateFormat('MMM d, h:mm a').format(notification.createdAt);
+  Widget _buildNotificationCard(
+      NotificationModel notification,
+      BuildContext context,
+      ) {
+    final timeString =
+    DateFormat('MMM d, h:mm a').format(notification.createdAt);
 
     return GestureDetector(
-      onTap: () {
-        // Mark as read when tapped
+      onTap: () async {
         if (!notification.isRead) {
           _notificationService.markAsRead(notification.id);
+        }
+
+        if (notification.recipeId != null) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(
+              child: CircularProgressIndicator(color: Colors.orange),
+            ),
+          );
+
+          final db = DatabaseService();
+          final recipe =
+          await db.getRecipeById(notification.recipeId!);
+
+          if (context.mounted) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+
+          if (recipe != null && context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    ViewRecipePage(recipe: recipe),
+              ),
+            );
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                    content:
+                    Text('Recipe is no longer available')),
+              );
+            }
+          }
         }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          // Slightly dim the card if it has already been read
           color: notification.isRead
               ? const Color(0xFFFFF3C7)
               : const Color(0xFFFFECA1),
-          borderRadius: BorderRadius.circular(40),
-          // Add a subtle border for unread notifications
+          borderRadius: BorderRadius.circular(30),
           border: notification.isRead
               ? null
-              : Border.all(color: Colors.orange.withOpacity(0.5), width: 1.5),
+              : Border.all(
+            color: Colors.orange.withOpacity(0.5),
+            width: 1.5,
+          ),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0, right: 15.0),
-              child: Icon(
-                notification.isRead
-                    ? Icons.notifications_none
-                    : Icons.notifications_active,
-                size: 30,
-                color: notification.isRead ? Colors.black54 : Colors.orange,
+            Row(
+              mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(
+                  notification.isRead
+                      ? Icons.notifications_none
+                      : Icons.notifications_active,
+                  size: 28,
+                  color: notification.isRead
+                      ? Colors.black54
+                      : Colors.orange,
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () async {
+                    await _notificationService
+                        .deleteNotification(notification.id);
+
+                    setState(() {
+                      _notifications.removeWhere(
+                              (n) => n.id == notification.id);
+                    });
+                  },
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            Text(
+              notification.title,
+              style: TextStyle(
+                fontWeight: notification.isRead
+                    ? FontWeight.w600
+                    : FontWeight.bold,
+                fontSize: 16,
               ),
             ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: TextStyle(
-                            fontWeight: notification.isRead
-                                ? FontWeight.w600
-                                : FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    notification.message,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black54,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    timeString,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.black.withOpacity(0.4),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 5),
+            Text(
+              notification.message,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              timeString,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.black.withOpacity(0.4),
               ),
             ),
           ],

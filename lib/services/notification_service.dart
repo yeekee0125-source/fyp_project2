@@ -2,27 +2,58 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
-  final _supabase = Supabase.instance.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
-  // Stream notifications for the currently logged-in user
   Stream<List<NotificationModel>> getUserNotifications() {
-    final userId = _supabase.auth.currentUser?.id;
+    final user = _supabase.auth.currentUser;
 
-    if (userId == null) return Stream.value([]);
+    if (user == null) {
+      return Stream.value([]);
+    }
 
     return _supabase
         .from('notifications')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .order('created_at', ascending: false)
-        .map((maps) => maps.map((map) => NotificationModel.fromMap(map)).toList());
+        .map((data) =>
+        data.map((map) => NotificationModel.fromMap(map)).toList());
   }
 
-  // Optional: Mark a notification as read
+  Future<void> createNotification({
+    required String targetUserId,
+    required String title,
+    required String message,
+    String? recipeId,
+  }) async {
+    await _supabase.from('notifications').insert({
+      'user_id': targetUserId,
+      'title': title,
+      'message': message,
+      'recipe_id': recipeId,
+      'is_read': false,
+    });
+  }
+
   Future<void> markAsRead(String notificationId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
     await _supabase
         .from('notifications')
         .update({'is_read': true})
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    await _supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId)
+        .eq('user_id', user.id);
   }
 }
