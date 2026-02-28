@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fyp_project2/screens/home/ranking_results_page.dart';
 import 'package:fyp_project2/screens/home/search_screen.dart';
 import 'package:fyp_project2/models/recipe_model.dart';
 import 'package:fyp_project2/models/video_model.dart';
@@ -19,8 +20,25 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late TabController _tabController;
   final db = DatabaseService();
-  final videoService = VideoService(); // Added for real data
-  final searchService = SearchService(); // Added for real data
+  final videoService = VideoService();
+  final searchService = SearchService();
+
+  final List<String> _filterCategories = [
+    'All Categories',
+    'Breakfast',
+    'Lunch',
+    'Dinner',
+    'Western',
+    'Japanese',
+    'Korean',
+    'Chinese',
+    'Malay',
+    'Dessert',
+    'Healthy',
+    'Vegan',
+    'Seafood',
+    'Other'
+  ];
 
   @override
   void initState() {
@@ -67,7 +85,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          // 1. Search Bar (Button Mode)
+          // 1. Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: TextField(
@@ -120,7 +138,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 1. EXPLORE: Updated to show real recipes from your SearchService
+  // 1. EXPLORE TAB
   Widget _buildExploreTab() {
     return FutureBuilder<List<RecipeModel>>(
       future: searchService.searchRecipes(category: 'All Categories'),
@@ -141,7 +159,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 2. VIDEO: Updated to use the Stream from Supabase
+  // 2. VIDEO TAB
   Widget _buildVideoTab() {
     return StreamBuilder<List<VideoModel>>(
       stream: videoService.getVideoStream('All'),
@@ -170,6 +188,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   MaterialPageRoute(
                     builder: (_) => VideoPlayerPage(
                       videoUrl: video.videoUrl,
+                      thumbnailUrl: video.thumbnailUrl,
                       title: video.title,
                     ),
                   ),
@@ -183,34 +202,142 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // 3. POPULAR: Stays as your previous banners
+  // 3. POPULAR TAB
+
   Widget _buildPopularTab() {
     return ListView(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       children: [
-        _buildPopularBanner("Ranked by views"),
-        _buildPopularBanner("Ranked by likes"),
-        _buildPopularBanner("Ranked by followers"),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            "Kitchen Leaderboard",
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.brown
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          child: Text(
+            "Discover the most popular content on KitchenBuddy",
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Most Liked Card
+        _buildDiscoveryCard(
+          title: "Most Liked Recipes",
+          subtitle: "The community's absolute favorites",
+          rankType: "likes",
+          imageAsset: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=600&auto=format&fit=crop",
+          badgeText: "TOP RATED",
+        ),
+
+        const SizedBox(height: 20),
+
+        // Top Creators Card
+        _buildDiscoveryCard(
+          title: "Top Content Creators",
+          subtitle: "Chefs with the largest following",
+          rankType: "followers",
+          imageAsset: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=600&auto=format&fit=crop",
+          badgeText: "TRENDING",
+        ),
+
+        const SizedBox(height: 30),
+
+        const Center(
+          child: Text(
+            "🍳 More rankings coming soon!",
+            style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+          ),
+        ),
       ],
     );
   }
 
-  // --- REFINED WIDGET HELPERS ---
+  // UI HELPER: Large Discovery Card
+  Widget _buildDiscoveryCard({
+    required String title,
+    required String subtitle,
+    required String rankType,
+    required String imageAsset,
+    required String badgeText,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => RankingResultsPage(rankType: rankType)),
+        );
+      },
+      child: Container(
+        height: 220,
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          image: DecorationImage(
+            image: NetworkImage(imageAsset),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.4), BlendMode.darken),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 15,
+              right: 15,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badgeText,
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              left: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  // --- REFINED WIDGET HELPERS ---
   Widget _buildStandardRecipeCard(RecipeModel recipe) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ListTile(
-        onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ViewRecipePage(recipe: recipe))
-        ),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ViewRecipePage(recipe: recipe))),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            width: 50, height: 50,
-            color: Colors.orange[50],
+            width: 50, height: 50, color: Colors.orange[50],
             child: (recipe.imagePath != null && recipe.imagePath!.isNotEmpty)
                 ? Image.network(recipe.imagePath!, fit: BoxFit.cover)
                 : const Icon(Icons.restaurant_menu, color: Colors.orange),
@@ -230,18 +357,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
+            alignment: Alignment.center,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Container(
                   height: 200,
                   width: double.infinity,
-                  color: Colors.black87,
-                  child: const Center(
-                    child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 60),
-                  ),
+                  color: Colors.black12,
+                  child: video.thumbnailUrl.isNotEmpty
+                      ? Image.network(
+                    video.thumbnailUrl,
+                    fit: BoxFit.cover,
+                  )
+                      : const Icon(Icons.videocam, color: Colors.grey, size: 50),
                 ),
               ),
+              if (video.thumbnailUrl.isNotEmpty)
+                const Icon(Icons.play_circle_fill, color: Colors.white70, size: 60),
+
               Positioned(
                 top: 10,
                 left: 10,
@@ -249,28 +383,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(20)
-                  ),
-                  child: Text(
-                      video.skillLevel,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)
-                  ),
+                      borderRadius: BorderRadius.circular(20)),
+                  child: Text(video.skillLevel,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                  child: Text(
-                      video.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown)
-                  )
-              ),
-              const Icon(Icons.more_vert, color: Colors.grey),
-            ],
+          Text(
+              video.title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.brown)
           ),
           Text(
             video.description,
@@ -279,23 +405,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             overflow: TextOverflow.ellipsis,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildPopularBanner(String text) {
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(colors: [Color(0xFFFFE5A5), Color(0xFFF39C12)]),
-      ),
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
       ),
     );
   }

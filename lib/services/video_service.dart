@@ -10,34 +10,38 @@ class VideoService {
   // UPLOAD logic
   Future<void> uploadVideo({
     required File videoFile,
+    required File thumbnailFile,
     required String title,
     required String description,
     required String skillLevel,
   }) async {
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
-      final filePath = '$currentUserId/$fileName';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      // 1. Storage Upload
-      await _supabase.storage.from('tutorial_videos').upload(
-        filePath,
-        videoFile,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+      // 1. Storage Upload for VIDEO
+      final videoName = '$timestamp.mp4';
+      final videoPath = '$currentUserId/$videoName';
+      await _supabase.storage.from('tutorial_videos').upload(videoPath, videoFile);
+      final String videoUrl = _supabase.storage.from('tutorial_videos').getPublicUrl(videoPath);
 
-      // 2. Get Public URL
-      final String videoUrl = _supabase.storage.from('tutorial_videos').getPublicUrl(filePath);
+      // 2. Storage Upload for THUMBNAIL
+      // Tip: Save images in a separate folder or bucket for better organization
+      final thumbName = '$timestamp.jpg';
+      final thumbPath = '$currentUserId/$thumbName';
+      await _supabase.storage.from('thumbnails').upload(thumbPath, thumbnailFile);
+      final String thumbnailUrl = _supabase.storage.from('thumbnails').getPublicUrl(thumbPath);
 
-      // 3. Database Insert
+      // 3. Database Insert with BOTH URLs
       await _supabase.from('videos').insert({
         'user_id': currentUserId,
         'title': title,
         'description': description,
         'video_url': videoUrl,
+        'thumbnail_url': thumbnailUrl, // Saving the image URL here
         'skill_level': skillLevel,
       });
 
-      print("Upload successful for: $title");
+      print("Upload successful: $title with thumbnail");
     } catch (e) {
       print("Upload Error: $e");
       rethrow;
@@ -45,7 +49,6 @@ class VideoService {
   }
 
   Stream<List<VideoModel>> getVideoStream(String level) {
-    // If 'All', we don't apply .eq() at all to avoid the filter logic
     if (level == 'All') {
       return _supabase
           .from('videos')
@@ -54,7 +57,6 @@ class VideoService {
           .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
     }
 
-    // If a specific level is selected, .eq() MUST come immediately after .stream()
     return _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
@@ -88,7 +90,7 @@ class VideoService {
     await _supabase.from('videos').update({
       'title': newTitle,
       'description': newDesc,
-      'skill_level': newLevel, // Add this line
+      'skill_level': newLevel,
     }).eq('id', videoId);
   }
 
@@ -99,7 +101,7 @@ class VideoService {
     return _supabase
         .from('videos')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId) // Filter by the logged-in user at the database level
+        .eq('user_id', userId)
         .order('created_at', ascending: false)
         .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
   }

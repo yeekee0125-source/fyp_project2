@@ -6,11 +6,11 @@ import 'package:fyp_project2/screens/recipe/upload_selection_screen.dart';
 import 'package:fyp_project2/screens/user_message_page.dart';
 import 'package:fyp_project2/services/database_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'ai_calorie_scan/calorie_estimate_page.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/home/home_page.dart';
 import 'dart:async';
 
-// Keys for navigation and snackbars
 final navigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -49,7 +49,6 @@ class KitchenBuddyApp extends StatelessWidget {
   }
 }
 
-/// Decision maker: Shows Login, Admin Dashboard, or User Home
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -63,12 +62,10 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    // Listen for Auth Events (like clicking the reset link)
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final AuthChangeEvent event = data.event;
 
       if (event == AuthChangeEvent.passwordRecovery) {
-        // When the link is clicked, push the Change Password screen
         if (mounted) {
           Navigator.push(
             context,
@@ -81,7 +78,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   void dispose() {
-    _authSubscription.cancel(); // Always clean up listeners
+    _authSubscription.cancel();
     super.dispose();
   }
 
@@ -105,7 +102,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-/// The Main Shell for the User App
 class MainNavigationContainer extends StatefulWidget {
   const MainNavigationContainer({super.key});
   @override
@@ -115,19 +111,17 @@ class MainNavigationContainer extends StatefulWidget {
 class _MainNavigationContainerState extends State<MainNavigationContainer> {
   int _currentIndex = 0;
 
-  // These widgets align with the indices 0, 1, 2, 3, 4
   final List<Widget> _pages = [
-    const HomePage(),                              // Index 0
-    const Center(child: Text("Calorie Calculator")),  // Index 1
-    const SizedBox(),                               // Index 2 (Empty for FAB)
-    const UserMessagePage(),                       // Index 3 (Functional Message Page)
-    const ProfilePage(),                           // Index 4
+    const HomePage(),
+    const CalorieEstimationPage(),
+    const SizedBox(),
+    const UserMessagePage(),
+    const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // preserves state of pages (e.g. scroll position in messages)
       body: IndexedStack(index: _currentIndex, children: _pages),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -151,7 +145,7 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
             _navItem(0, Icons.home_outlined, Icons.home, "Home"),
             _navItem(1, Icons.local_fire_department_outlined, Icons.local_fire_department, "Calorie"),
 
-            const SizedBox(width: 40), // Space for FAB
+            const SizedBox(width: 40),
 
             _navItem(3, Icons.message_outlined, Icons.message, "Messages"),
             _navItem(4, Icons.person_outline, Icons.person, "Profile"),

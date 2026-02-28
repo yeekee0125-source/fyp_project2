@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/video_service.dart';
 import '../../models/video_model.dart';
+import 'video_player_page.dart';
 
 class MyVideosPage extends StatefulWidget {
   const MyVideosPage({super.key});
@@ -24,7 +25,6 @@ class _MyVideosPageState extends State<MyVideosPage> {
         iconTheme: const IconThemeData(color: Colors.brown),
       ),
       body: StreamBuilder<List<VideoModel>>(
-        // 🔥 Using the specific user-only stream
         stream: _videoService.getMyVideosStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -74,14 +74,49 @@ class _MyVideosPageState extends State<MyVideosPage> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(10),
-        leading: Container(
-          width: 80,
-          height: 60,
-          decoration: BoxDecoration(
+        onTap: () {
+          // Navigate to player and pass both URLs
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => VideoPlayerPage(
+                videoUrl: video.videoUrl,
+                thumbnailUrl: video.thumbnailUrl,
+                title: video.title,
+              ),
+            ),
+          );
+        },
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: 80,
+            height: 60,
             color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Display the 封面 (Thumbnail)
+                if (video.thumbnailUrl.isNotEmpty)
+                  Image.network(
+                    video.thumbnailUrl,
+                    width: 80,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, color: Colors.grey),
+                  )
+                else
+                  const Icon(Icons.videocam, color: Colors.grey),
+
+                // Small Play Icon Overlay
+                Container(
+                  decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
+                  child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                ),
+              ],
+            ),
           ),
-          child: const Icon(Icons.play_circle_fill, color: Colors.orange),
         ),
         title: Text(video.title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("Level: ${video.skillLevel}"),
