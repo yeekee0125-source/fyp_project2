@@ -40,7 +40,7 @@ class AdminDashboard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // 1. Profile/Dashboard Quick View (Teammate's CRUD context)
+            // 1. Profile/Dashboard Quick View
             _buildAdminProfileCard(),
 
             const SizedBox(height: 30),
@@ -55,19 +55,7 @@ class AdminDashboard extends StatelessWidget {
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPendingRecipes())),
             ),
 
-            // 3. Video Management (Placeholder for later)
-            _buildAdminTile(
-              context,
-              title: "Video Management",
-              subtitle: "Manage cooking tutorials and shorts",
-              icon: Icons.play_circle_fill,
-              color: Colors.blueAccent,
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Video Management Service coming soon!")));
-              },
-            ),
-
-            // 4. Reported Users (Teammate Code)
+            // 3. Reported Users
             _buildAdminTile(
               context,
               title: "Reported Users",
@@ -77,7 +65,7 @@ class AdminDashboard extends StatelessWidget {
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminReportedUsers())),
             ),
 
-            // 5. Feedback Management (Linked)
+            // 4. Feedback Management
             _buildAdminTile(
               context,
               title: "Feedback Management",
@@ -113,7 +101,7 @@ class AdminDashboard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text("System Administrator", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text("Main Dashboard (CRUD Ready)", style: TextStyle(fontSize: 13, color: Colors.brown)),
+              Text("Main Dashboard", style: TextStyle(fontSize: 13, color: Colors.brown)),
             ],
           ),
         ],

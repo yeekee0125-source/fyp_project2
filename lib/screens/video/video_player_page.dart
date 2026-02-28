@@ -3,9 +3,15 @@ import 'package:video_player/video_player.dart';
 
 class VideoPlayerPage extends StatefulWidget {
   final String videoUrl;
+  final String thumbnailUrl;
   final String title;
 
-  const VideoPlayerPage({super.key, required this.videoUrl, required this.title});
+  const VideoPlayerPage({
+    super.key,
+    required this.videoUrl,
+    required this.thumbnailUrl,
+    required this.title
+  });
 
   @override
   State<VideoPlayerPage> createState() => _VideoPlayerPageState();
@@ -14,14 +20,21 @@ class VideoPlayerPage extends StatefulWidget {
 class _VideoPlayerPageState extends State<VideoPlayerPage> {
   late VideoPlayerController _controller;
   bool _showControls = true;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
       ..initialize().then((_) {
-        setState(() {}); // Refresh once video is loaded
-        _controller.play();
+        if (mounted) {
+          setState(() {});
+          _controller.play();
+        }
+      }).catchError((error) {
+        if (mounted) {
+          setState(() => _hasError = true);
+        }
       });
   }
 
@@ -41,21 +54,48 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Center(
-        child: _controller.value.isInitialized
-            ? GestureDetector(
-          onTap: () => setState(() => _showControls = !_showControls),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 1. Show Thumbnail (封面) while loading or if error occurs
+            if (!_controller.value.isInitialized || _hasError)
+              Image.network(
+                widget.thumbnailUrl,
+                fit: BoxFit.contain,
+                width: double.infinity,
+                errorBuilder: (context, e, s) => const Icon(Icons.movie, color: Colors.white, size: 50),
               ),
-              if (_showControls) _buildControls(),
-            ],
-          ),
-        )
-            : const CircularProgressIndicator(color: Colors.orange),
+
+            // 2. Video Player
+            if (_controller.value.isInitialized)
+              GestureDetector(
+                onTap: () => setState(() => _showControls = !_showControls),
+                child: AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: VideoPlayer(_controller),
+                ),
+              ),
+
+            // 3. Controls Overlay
+            if (_controller.value.isInitialized && _showControls)
+              _buildControls(),
+
+            // 4. Loading Spinner (Only show if not initialized and no error)
+            if (!_controller.value.isInitialized && !_hasError)
+              const CircularProgressIndicator(color: Colors.orange),
+
+            // 5. Error Message
+            if (_hasError)
+              const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error, color: Colors.red, size: 50),
+                  SizedBox(height: 10),
+                  Text("Hardware Decoder Error", style: TextStyle(color: Colors.white)),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -63,8 +103,8 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   Widget _buildControls() {
     return Container(
       color: Colors.black26,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
           IconButton(
             icon: Icon(
@@ -78,8 +118,16 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
               });
             },
           ),
-          VideoProgressIndicator(_controller, allowScrubbing: true,
-              colors: const VideoProgressColors(playedColor: Colors.orange)),
+          Positioned(
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: VideoProgressIndicator(
+              _controller,
+              allowScrubbing: true,
+              colors: const VideoProgressColors(playedColor: Colors.orange),
+            ),
+          ),
         ],
       ),
     );
