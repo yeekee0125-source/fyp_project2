@@ -5,16 +5,64 @@ import '../../services/database_service.dart';
 import '../../services/recipe_service.dart';
 import 'view_recipe.dart';
 
-
 class RecipeListPage extends StatefulWidget {
   const RecipeListPage({super.key});
 
   @override
   State<RecipeListPage> createState() => _RecipeListPageState();
+
 }
 
 class _RecipeListPageState extends State<RecipeListPage> {
   final db = DatabaseService();
+
+  Future<void> _confirmDelete(BuildContext context, RecipeModel recipe) async {
+    final bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Recipe', style: TextStyle(color: Colors.red)),
+        content: Text('Are you sure you want to delete "${recipe.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator(color: Colors.orange)),
+      );
+
+      try {
+        await db.deleteRecipe(recipe.id);
+
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Recipe deleted successfully'), backgroundColor: Colors.green),
+          );
+          setState(() {}); // Refresh the list to remove the deleted item
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop(); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
 
   Widget _buildRecipeCard(RecipeModel recipe) {
     return Card(
@@ -70,7 +118,33 @@ class _RecipeListPageState extends State<RecipeListPage> {
                 ),
             ],
           ),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.orange),
+          // Dropdown Menu
+          trailing: PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.orange),
+            onSelected: (value) async {
+              if (value == 'edit') {
+                // Navigate to AddRecipePage to edit
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // Pass the existing recipe to the AddRecipePage
+                    builder: (context) => AddRecipePage(recipe: recipe),
+                  ),
+                );
+                // Refresh the list if they saved changes
+                if (result == true) setState(() {});
+              } else if (value == 'delete') {
+                _confirmDelete(context, recipe);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+              const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+              ),
+            ],
+          ),
           onTap: () async {
             // Navigates to the Detail page as required by your functional objectives [cite: 89, 732]
             final result = await Navigator.push(

@@ -1,10 +1,8 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../main.dart';
 import '../../services/database_service.dart';
-import '../home/home_page.dart';
 import 'registration.dart';
 import 'forgot_password.dart';
 import 'reset_password.dart';
@@ -68,25 +66,50 @@ class _LoginPageState extends State<LoginPage> {
       _passwordCtrl.text.trim(),
     );
 
-    if (mounted) setState(() => _isLoading = false);
+    if (!mounted) return;
 
     if (success) {
-      if (mounted) {
-        //  Navigate to HomePage if login is successful
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AuthGate()),
-        );
-      }
-    } else {
-      if (mounted) {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      // Check user role from users table
+      final response = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user!.id)
+          .single();
+
+      final role = response['role'];
+
+      setState(() => _isLoading = false);
+
+      // Block banned user
+      if (role == 'banned') {
+        await supabase.auth.signOut();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Invalid email or password'),
+            content: Text('Your account has been banned'),
             backgroundColor: Colors.red,
           ),
         );
+        return;
       }
+
+      //Normal user
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+      );
+    } else {
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid email or password'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

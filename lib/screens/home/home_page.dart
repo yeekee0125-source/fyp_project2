@@ -9,6 +9,8 @@ import 'package:fyp_project2/services/video_service.dart';
 import '../auth/login.dart';
 import '../recipe/view_recipe.dart';
 import '../video/video_player_page.dart';
+import 'package:fyp_project2/ai/ai_recipe_gemini.dart';
+import 'package:fyp_project2/ai/ai_recipe_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,6 +24,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final db = DatabaseService();
   final videoService = VideoService();
   final searchService = SearchService();
+  final GeminiService _geminiService = GeminiService();
+  String _aiRecipePreview = "";
+  bool _isAiLoading = false;
 
   final List<String> _filterCategories = [
     'All Categories',
@@ -39,6 +44,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     'Seafood',
     'Other'
   ];
+
+  Future<void> _generateAiRecommendation() async {
+    try {
+      setState(() => _isAiLoading = true);
+      final keyword = await db.getMostSearchedKeyword();
+
+      final prefs = await db.getUserPreferences();
+
+      final generated = await _geminiService.generateRecipe(
+        keyword,   // ← AI now uses trending search
+        prefs,
+      );
+
+      if (mounted) {
+        setState(() {
+          _aiRecipePreview = generated;
+          _isAiLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isAiLoading = false);
+    }
+  }
 
   @override
   void initState() {
@@ -143,19 +171,110 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return FutureBuilder<List<RecipeModel>>(
       future: searchService.searchRecipes(category: 'All Categories'),
       builder: (context, snapshot) {
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: Colors.orange));
         }
+
         final recipes = snapshot.data ?? [];
-        if (recipes.isEmpty) {
-          return const Center(child: Text("No recipes found."));
+
+        if (_aiRecipePreview.isEmpty && !_isAiLoading) {
+          _generateAiRecommendation();
         }
-        return ListView.builder(
-          padding: const EdgeInsets.all(15),
-          itemCount: recipes.length,
-          itemBuilder: (context, index) => _buildStandardRecipeCard(recipes[index]),
+
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // AI SECTION
+              _buildAiSection(),
+
+              const SizedBox(height: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  "🍳 Fresh Recipes For You",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // NORMAL RECIPES
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(15),
+                itemCount: recipes.length,
+                itemBuilder: (context, index) =>
+                    _buildStandardRecipeCard(recipes[index]),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildAiSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "🤖 AI Picks For You",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AIRecipePage(),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: _isAiLoading
+                  ? const Center(
+                child: CircularProgressIndicator(color: Colors.orange),
+              )
+                  : Text(
+                _aiRecipePreview.isEmpty
+                    ? "Tap to generate AI recipe"
+                    : _aiRecipePreview.length > 200
+                    ? _aiRecipePreview.substring(0, 200) + "..."
+                    : _aiRecipePreview,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
