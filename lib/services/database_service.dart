@@ -7,6 +7,7 @@ import '../models/recipe_model.dart';
 import 'package:flutter/foundation.dart';
 import 'notification_service.dart';
 
+
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
@@ -604,6 +605,21 @@ class DatabaseService {
       'user_id_param': user!.id,
       'keyword_param': keyword,
     });
+  }
+
+  Future<String> getMostSearchedKeyword() async {
+    try {
+      final result = await supabase
+          .from('search_logs')
+          .select('keyword, count')
+          .order('count', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      return result?['keyword'] ?? 'Chicken';
+    } catch (e) {
+      return 'Chicken';
+    }
   }
 }
 

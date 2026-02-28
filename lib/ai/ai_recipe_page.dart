@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Needed for Clipboard
+import 'package:flutter/services.dart';
 import 'ai_recipe_gemini.dart';
-import '../../services/database_service.dart'; // 🔥 Make sure this import is correct
+import '../../services/database_service.dart';
 
 class AIRecipePage extends StatefulWidget {
   const AIRecipePage({super.key});
@@ -13,7 +13,7 @@ class AIRecipePage extends StatefulWidget {
 class _AIRecipePageState extends State<AIRecipePage> {
   final TextEditingController _ingredientController = TextEditingController();
   final GeminiService _geminiService = GeminiService();
-  final DatabaseService _db = DatabaseService(); // 🔥 Database connection
+  final DatabaseService _db = DatabaseService();
 
   String _result = "";
   bool _isLoading = false;
@@ -281,50 +281,104 @@ class _AIRecipePageState extends State<AIRecipePage> {
 
   // Helper: Show this when the recipe is ready
   Widget _buildResultCard() {
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 25), // Space for the copy button
-                SelectableText(
-                  _result,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    height: 1.6,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 25, 20, 20),
+            child: SingleChildScrollView(
+              child: _formatRecipe(_result),
             ),
           ),
-        ),
-        // Floating Copy Button (Top Right of Card)
-        Positioned(
-          top: 10,
-          right: 10,
-          child: IconButton(
-            icon: const Icon(Icons.copy, color: Colors.orange),
-            tooltip: "Copy Recipe",
-            onPressed: _copyToClipboard,
+
+          // Floating Copy Button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Material(
+              color: Colors.orange,
+              shape: const CircleBorder(),
+              elevation: 4,
+              child: IconButton(
+                icon: const Icon(Icons.copy, color: Colors.white),
+                tooltip: "Copy Recipe",
+                onPressed: _copyToClipboard,
+              ),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _formatRecipe(String text) {
+    final lines = text.split('\n');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        if (line.toLowerCase().contains("ingredients")) {
+          return _sectionHeader("🧂 Ingredients");
+        } else if (line.toLowerCase().contains("steps") ||
+            line.toLowerCase().contains("method")) {
+          return _sectionHeader("👨‍🍳 Cooking Steps");
+        } else if (line.trim().isEmpty) {
+          return const SizedBox(height: 8);
+        } else if (!line.startsWith("-") &&
+            !line.contains(":") &&
+            line.length < 40) {
+          // Likely recipe title
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 15),
+            child: Text(
+              line,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepOrange,
+              ),
+            ),
+          );
+        } else {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              line,
+              style: const TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                color: Colors.black87,
+              ),
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.orange,
         ),
-      ],
+      ),
     );
   }
 }

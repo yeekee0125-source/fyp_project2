@@ -14,7 +14,17 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
   final SupabaseClient supabase = Supabase.instance.client;
   late String userId;
 
-  // Data variables
+  Map<String, int> preferenceData = {};
+  final List<Color> chartColors = [
+    Colors.orange,
+    Colors.deepOrange,
+    Colors.amber,
+    Colors.redAccent,
+    Colors.brown,
+    Colors.green,
+    Colors.purple,
+  ];
+
   int totalLikes = 0;
   int totalComments = 0;
   int totalSaves = 0;
@@ -31,34 +41,31 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
 
   Future<void> _fetchStats() async {
     try {
-      // 1. Fetch Likes (Simplified: Just get the IDs and count the list length)
-      final List likesData = await supabase
-          .from('likes')
-          .select('id')
-          .eq('user_id', userId);
+      final List likesData = await supabase.from('likes').select('id').eq('user_id', userId);
+      final List commentsData = await supabase.from('comments').select('id').eq('user_id', userId);
+      final List savesData = await supabase.from('saves').select('id').eq('user_id', userId);
 
-      // 2. Fetch Comments
-      final List commentsData = await supabase
-          .from('comments')
-          .select('id')
-          .eq('user_id', userId);
+      final List recipesData = await supabase.from('recipes').select('id').eq('user_id', userId);
+      final List videosData = await supabase.from('videos').select('id').eq('user_id', userId);
 
-      // 3. Fetch Saves
-      final List savesData = await supabase
-          .from('saves')
-          .select('id')
-          .eq('user_id', userId);
+      final userData = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', userId)
+          .single();
 
-      // 4. Content Distribution (Recipes vs Videos)
-      final List recipesData = await supabase
-          .from('recipes')
-          .select('id')
-          .eq('user_id', userId);
+      Map<String, int> prefCount = {};
+      if (userData['preferences'] != null) {
+        String prefs = userData['preferences'];
+        // If preferences are comma-separated (e.g., "Vegan, Keto, Spicy"), we split them
+        List<String> prefsList = prefs.split(',').map((e) => e.trim()).toList();
 
-      final List videosData = await supabase
-          .from('videos')
-          .select('id')
-          .eq('user_id', userId);
+        for (var p in prefsList) {
+          if (p.isNotEmpty) {
+            prefCount[p] = (prefCount[p] ?? 0) + 1;
+          }
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -67,6 +74,7 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
           totalSaves = savesData.length;
           recipeCount = recipesData.length;
           videoCount = videosData.length;
+          preferenceData = prefCount;
           _isLoading = false;
         });
       }
@@ -96,7 +104,6 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
             const Text("Insights", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
             const SizedBox(height: 25),
 
-            // Interaction Source (Pie Chart)
             _buildChartCard(
               title: "Interaction Source",
               child: Row(
@@ -109,7 +116,21 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
 
             const SizedBox(height: 20),
 
-            // Content Distribution (Bar Chart)
+            _buildChartCard(
+              title: "Dietary Preferences",
+              child: preferenceData.isEmpty
+                  ? const Center(child: Text("No preferences selected"))
+                  : Column(
+                children: [
+                  SizedBox(height: 220, child: _buildPreferenceChart()),
+                  const SizedBox(height: 15),
+                  _buildPreferenceLegend(),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             _buildChartCard(
               title: "Content Distribution",
               child: Column(
@@ -126,12 +147,9 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
     );
   }
 
-  // --- Chart Building Logic ---
-
   Widget _buildPieChart() {
     double total = (totalLikes + totalComments + totalSaves).toDouble();
     if (total == 0) return const Center(child: Text("No data yet"));
-
     return SizedBox(
       height: 140,
       child: PieChart(
@@ -175,12 +193,57 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
     );
   }
 
-  // --- UI Helpers ---
+  Widget _buildPreferenceChart() {
+    final total = preferenceData.values.fold(0, (a, b) => a + b);
+    if (total == 0) return const Center(child: Text("No preference data"));
+    int index = 0;
+    return PieChart(
+      PieChartData(
+        sectionsSpace: 2,
+        centerSpaceRadius: 35,
+        sections: preferenceData.entries.map((entry) {
+          final percent = (entry.value / total) * 100;
+          final section = PieChartSectionData(
+            color: chartColors[index % chartColors.length],
+            value: entry.value.toDouble(),
+            title: "${percent.toStringAsFixed(0)}%",
+            radius: 55,
+            titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+          );
+          index++;
+          return section;
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPreferenceLegend() {
+    int index = 0;
+    final total = preferenceData.values.fold(0, (a, b) => a + b);
+    return Column(
+      children: preferenceData.entries.map((entry) {
+        final percent = total == 0 ? 0 : (entry.value / total) * 100;
+        final color = chartColors[index % chartColors.length];
+        index++;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Text(entry.key, style: const TextStyle(fontSize: 13)),
+              const Spacer(),
+              Text("${percent.toStringAsFixed(0)}%", style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   Widget _buildPieChartLegend() {
     int total = totalLikes + totalComments + totalSaves;
     String getPercent(int val) => total == 0 ? "0%" : "${((val / total) * 100).toStringAsFixed(0)}%";
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
