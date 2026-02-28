@@ -1,50 +1,37 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  // ⚠️ Your API Key
-  static const String _apiKey = 'AIzaSyC2Vi3yyF0QTLlctItv7mFbyLm4Xo_Favk';
+  static const String _apiKey = 'AIzaSyBqxCoHFAZs30GScCjJlF3JVQdJx657g2M';
 
-  Future<String> generateRecipe(String ingredients) async {
-    // ✅ 1. Use the correct URL for Gemini Pro
-    final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=$_apiKey',
-    );
-
-    // ✅ 2. Construct the prompt
-    final prompt = 'Suggest a cooking recipe using the following ingredients: $ingredients. '
-        'Include Recipe name, Ingredients list, and Cooking steps. Keep it simple.';
-
+  Future<String> generateRecipe(String ingredients, List<String> userPreferences) async {
     try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          "contents": [{
-            "parts": [{"text": prompt}]
-          }]
-        }),
+      final model = GenerativeModel(
+        model: 'gemini-3-flash-preview',
+        apiKey: _apiKey,
       );
 
-      if (response.statusCode != 200) {
-        // Print the real error to the console
-        print("API Error: ${response.body}");
-        throw Exception('Gemini API Error: ${response.statusCode}');
-      }
+      // 1. Format the preferences into a sentence for the AI
+      // e.g., "The recipe must be Halal, Spicy."
+      String dietString = userPreferences.isEmpty
+          ? ""
+          : "IMPORTANT: The recipe must be ${userPreferences.join(', ')}.";
 
-      final data = jsonDecode(response.body);
+      // 2. Create the smart prompt
+      final prompt = 'Suggest a cooking recipe using these ingredients: $ingredients. '
+          '$dietString ' //The preferences are injected here
+          'Include Recipe name, Ingredients list, and Cooking steps. Keep it simple.';
 
-      if (data['candidates'] != null &&
-          data['candidates'].isNotEmpty &&
-          data['candidates'][0]['content'] != null) {
-        return data['candidates'][0]['content']['parts'][0]['text'];
-      } else {
-        return "No recipe returned. Try different ingredients.";
-      }
+      final content = [Content.text(prompt)];
+
+      // 3. Generate content
+      final response = await model.generateContent(content);
+
+      // 4. Return the result
+      return response.text ?? "No recipe found. Try again.";
 
     } catch (e) {
-      print("🔴 GEMINI ERROR: $e");
-      return 'Failed to generate recipe. Check console for details.';
+      print("🔴 GEMINI SDK ERROR: $e");
+      return "Failed to generate recipe. Please check your internet connection.";
     }
   }
 }

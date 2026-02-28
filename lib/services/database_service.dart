@@ -543,5 +543,67 @@ class DatabaseService {
     return response.map<RecipeModel>((e) => RecipeModel.fromJson(e)).toList();
   }
 
+  // ------------------------------------------------
+  //  User Preferences for AI
+  // ------------------------------------------------
+
+  // 1. Get User Preferences
+  Future<List<String>> getUserPreferences() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      // We use .maybeSingle() instead of .single() so it doesn't crash
+      // if the user row is missing or duplicates exist.
+      final data = await supabase
+          .from('users')
+          .select('preferences')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (data == null) return [];
+
+      final String? prefString = data['preferences'];
+
+      // Convert "Halal,Spicy" string back into a List ["Halal", "Spicy"]
+      if (prefString != null && prefString.isNotEmpty) {
+        return prefString.split(',');
+      }
+    } catch (e) {
+      log('Error fetching preferences: $e');
+    }
+    return [];
+  }
+
+  // 2. Save User Preferences
+  Future<void> saveUserPreferences(List<String> preferences) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    // Convert List ["Halal", "Spicy"] -> String "Halal,Spicy"
+    // (Supabase stores simple text easier than arrays sometimes)
+    final String prefString = preferences.join(',');
+
+    try {
+      await supabase
+          .from('users')
+          .update({'preferences': prefString})
+          .eq('id', user.id);
+    } catch (e) {
+      log('Error saving preferences: $e');
+    }
+  }
+
+  Future<void> logUserInterest(String keyword) async {
+    // If they search "Spicy Chicken", we log "Spicy" and "Chicken"
+    // This is a simplified example updating the 'spicy' count by +1
+    final user = supabase.auth.currentUser;
+
+    // Logic: Check if row exists. If yes, count++. If no, create row with count=1.
+    await supabase.rpc('increment_interest', params: {
+      'user_id_param': user!.id,
+      'keyword_param': keyword,
+    });
+  }
 }
 
