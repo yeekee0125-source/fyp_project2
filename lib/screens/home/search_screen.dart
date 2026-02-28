@@ -22,7 +22,6 @@ class _SearchDiscoveryScreenState extends State<SearchDiscoveryScreen> {
   bool _isSearching = false;
   bool _isFilterVisible = false;
 
-  // Linked to your hardcoded categories
   final List<String> _filterCategories = [
     'All Categories',
     'Breakfast',
