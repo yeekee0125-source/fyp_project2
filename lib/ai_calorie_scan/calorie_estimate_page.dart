@@ -16,12 +16,17 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
   final ImagePicker _picker = ImagePicker();
   late final GenerativeModel _model;
 
+  /// The Gemini API Key used for calorie estimation.
+  ///
+  /// IMPORTANT: This key is temporarily hardcoded for the Final Year Project
+  /// submission. This approach is chosen to facilitate ease of testing for
+  /// examiners. Secure environment variables should be used for deployment.
   @override
   void initState() {
     super.initState();
     _model = GenerativeModel(
       model: 'gemini-3-flash-preview',
-      apiKey: 'AIzaSyAebLxuw0J6KOtIOylPqunmAUl4NDBKZgI',//
+      apiKey: '',//paste this api key inside the string: AIzaSyDuS2u7wp9d5_kPyJ4yuPu61xvPnw4fGeM
     );
   }
 
@@ -85,7 +90,6 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
         final dish = data[0].trim();
         final kcal = int.tryParse(data[1].replaceAll(RegExp(r'[^0-9]'), '').trim()) ?? 0;
 
-        // CRITICAL: We pass the selected portion here
         await _saveToSupabase(dish, kcal, _selectedPortion);
 
         if (mounted) {
@@ -120,13 +124,12 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
     }
 
     try {
-      // Ensure these keys match your Supabase column names exactly
       await supabase.from('calorie_scans').insert({
         'user_id': user.id,
         'detected_dish': dish,
         'estimated_calorie': kcal,
         'image_url': finalImageUrl,
-        'portion_size': portion, // This saves the portion to the DB
+        'portion_size': portion,
       });
     } catch (e) {
       debugPrint("Database Save Error: $e");

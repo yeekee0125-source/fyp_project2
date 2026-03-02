@@ -150,7 +150,7 @@ class FeedbackService {
     await _supabase.from('feedback').update({'status': status}).eq('id', id);
   }
 
-  // 4. Streams (Real-time)
+  // 4. Streams
   Stream<List<Map<String, dynamic>>> getUserStream() {
     return _supabase
         .from('feedback')
@@ -159,7 +159,7 @@ class FeedbackService {
         .order('created_at', ascending: false);
   }
 
-  // Fetch full user profile (including name/image)
+  // Fetch full user profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
       return await _supabase.from('users').select().eq('id', userId).maybeSingle();
