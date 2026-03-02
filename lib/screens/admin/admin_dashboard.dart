@@ -45,7 +45,7 @@ class AdminDashboard extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // 2. Recipe Management (Teammate Code)
+            // 2. Recipe Management
             _buildAdminTile(
               context,
               title: "Recipe Management",

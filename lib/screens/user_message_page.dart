@@ -29,7 +29,6 @@ class _UserMessagePageState extends State<UserMessagePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient background for a more premium feel
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -154,7 +153,7 @@ class _UserMessagePageState extends State<UserMessagePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Required for custom shape
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(

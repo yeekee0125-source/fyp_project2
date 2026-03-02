@@ -61,7 +61,6 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> with SingleTicker
           itemBuilder: (context, index) {
             final item = data[index];
 
-            // We use FutureBuilder to get the user's name from the 'users' table
             return FutureBuilder<Map<String, dynamic>?>(
                 future: _service.getUserProfile(item['user_id']),
                 builder: (context, userSnapshot) {
@@ -77,7 +76,6 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> with SingleTicker
                         child: Text(item['rating'].toString(), style: TextStyle(color: _getStatusColor(item['status']), fontWeight: FontWeight.bold)),
                       ),
                       title: Text(item['reason'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                      // Subtitle now shows the Sender's Name
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -118,7 +116,6 @@ class _AdminFeedbackPageState extends State<AdminFeedbackPage> with SingleTicker
             child: Column(
               crossAxisAlignment: isAdmin ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                // Label showing who sent the message
                 Text(
                   isAdmin ? "Admin" : userName,
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),

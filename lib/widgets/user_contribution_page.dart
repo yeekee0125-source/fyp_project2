@@ -14,7 +14,7 @@ class UserRecipesPage extends StatelessWidget {
     final supabase = Supabase.instance.client;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBE6), // Your theme color
+      backgroundColor: const Color(0xFFFFFBE6),
       appBar: AppBar(
         title: Text("Recipes by $userName"),
         backgroundColor: Colors.orange,
@@ -60,7 +60,6 @@ class UserRecipesPage extends StatelessWidget {
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios, color: Colors.orange, size: 16),
                   onTap: () {
-                    // Navigate to the recipe details (your existing view function)
                     Navigator.push(
                       context,
                       MaterialPageRoute(

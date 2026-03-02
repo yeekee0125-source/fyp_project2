@@ -45,6 +45,7 @@ dependencies:
   video_player: ^2.10.1
   fl_chart: ^0.66.0
   google_generative_ai: ^0.4.7
+  flutter_dotenv: ^5.1.0
 
 
 dev_dependencies:
@@ -68,6 +69,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/secrets.env
 
   # To add assets to your application, add an assets section, like this:
   # assets:

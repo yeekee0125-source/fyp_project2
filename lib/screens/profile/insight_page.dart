@@ -57,7 +57,6 @@ class _UserInsightsPageState extends State<UserInsightsPage> {
       Map<String, int> prefCount = {};
       if (userData['preferences'] != null) {
         String prefs = userData['preferences'];
-        // If preferences are comma-separated (e.g., "Vegan, Keto, Spicy"), we split them
         List<String> prefsList = prefs.split(',').map((e) => e.trim()).toList();
 
         for (var p in prefsList) {

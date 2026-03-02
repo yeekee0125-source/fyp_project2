@@ -131,7 +131,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
     }
   }
 
-  // ... Rest of the UI building remains the same, but views logic is removed from logic ...
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
