@@ -16,9 +16,8 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
   final ImagePicker _picker = ImagePicker();
   late final GenerativeModel _model;
 
-  /// The Gemini API Key used for calorie estimation.
-  ///
-  /// IMPORTANT: This key is temporarily hardcoded for the Final Year Project
+  /// The Gemini API Key used for calorie estimation
+  /// is temporarily hardcoded for the Final Year Project
   /// submission. This approach is chosen to facilitate ease of testing for
   /// examiners. Secure environment variables should be used for deployment.
   @override
@@ -26,7 +25,7 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
     super.initState();
     _model = GenerativeModel(
       model: 'gemini-3-flash-preview',
-      apiKey: '',//paste this api key inside the string: AIzaSyDuS2u7wp9d5_kPyJ4yuPu61xvPnw4fGeM
+      apiKey: '',
     );
   }
 
