@@ -24,8 +24,8 @@ class _CalorieEstimationPageState extends State<CalorieEstimationPage> {
   void initState() {
     super.initState();
     _model = GenerativeModel(
-      model: 'gemini-3-flash-preview',
-      apiKey: '',
+      model: 'gemini-2.5-flash',
+      apiKey: 'AIzaSyA5AV8nIEwXnvQcDsrVud33QQ0NIbNQzoo',
     );
   }
 

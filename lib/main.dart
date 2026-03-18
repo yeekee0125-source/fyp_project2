@@ -120,11 +120,21 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Check if the keyboard is visible
+    bool isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
+      // 2. This ensures the body adjusts when keyboard appears
+      resizeToAvoidBottomInset: true,
+
       body: IndexedStack(index: _currentIndex, children: _pages),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
+
+      // 3. Only show the FAB if the keyboard is NOT visible
+      floatingActionButton: isKeyboardVisible
+          ? null
+          : FloatingActionButton(
         shape: const CircleBorder(),
         backgroundColor: Colors.white,
         elevation: 4,
@@ -138,14 +148,15 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         color: Colors.white,
-        child: Row(
+        // 4. Hide the bottom bar too if keyboard is visible for a cleaner look
+        child: isKeyboardVisible
+            ? const SizedBox.shrink()
+            : Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _navItem(0, Icons.home_outlined, Icons.home, "Home"),
             _navItem(1, Icons.local_fire_department_outlined, Icons.local_fire_department, "Calorie"),
-
             const SizedBox(width: 40),
-
             _navItem(3, Icons.message_outlined, Icons.message, "Messages"),
             _navItem(4, Icons.person_outline, Icons.person, "Profile"),
           ],
