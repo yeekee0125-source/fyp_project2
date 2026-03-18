@@ -1,7 +1,7 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  static const String _apiKey = 'AIzaSyBqxCoHFAZs30GScCjJlF3JVQdJx657g2M';
+  static const String _apiKey = '';
 
   Future<String> generateRecipe(String ingredients, List<String> userPreferences) async {
     try {
