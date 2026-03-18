@@ -166,14 +166,12 @@ class _CommentSheetState extends State<CommentSheet> {
   final _commentCtrl = TextEditingController();
   final _service = InteractionService();
 
-  // New state for the internal message
   String? _statusMessage;
 
   void _showInternalMessage(String msg) {
     if (!mounted) return;
     setState(() => _statusMessage = msg);
 
-    // Auto-hide the message after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) setState(() => _statusMessage = null);
     });
@@ -256,14 +254,13 @@ class _CommentSheetState extends State<CommentSheet> {
                             if (comment['created_at'] != null) {
                               final DateTime localDateTime = DateTime.parse(comment['created_at']).toLocal();
 
-                              // This pattern gives you: Feb 24, 2026 • 4:19 PM
                               fullDateTimeStr = DateFormat('MMM d, yyyy • h:mm a').format(localDateTime);
                             }
 
                             return Text(
                                 "$displayName • $fullDateTimeStr",
                                 style: TextStyle(
-                                    fontSize: 11, // Slightly smaller to fit the longer date
+                                    fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                     color: isMe ? Colors.orange : Colors.brown
                                 )

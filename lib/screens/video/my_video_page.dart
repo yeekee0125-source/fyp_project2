@@ -75,7 +75,6 @@ class _MyVideosPageState extends State<MyVideosPage> {
       child: ListTile(
         contentPadding: const EdgeInsets.all(10),
         onTap: () {
-          // Navigate to player and pass both URLs
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -96,7 +95,6 @@ class _MyVideosPageState extends State<MyVideosPage> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Display the 封面 (Thumbnail)
                 if (video.thumbnailUrl.isNotEmpty)
                   Image.network(
                     video.thumbnailUrl,
@@ -109,7 +107,6 @@ class _MyVideosPageState extends State<MyVideosPage> {
                 else
                   const Icon(Icons.videocam, color: Colors.grey),
 
-                // Small Play Icon Overlay
                 Container(
                   decoration: BoxDecoration(color: Colors.black26, shape: BoxShape.circle),
                   child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
@@ -141,11 +138,11 @@ class _MyVideosPageState extends State<MyVideosPage> {
   void _showEditDialog(VideoModel video) {
     final titleController = TextEditingController(text: video.title);
     String selectedLevel = video.skillLevel;
-    bool isUpdating = false; // Local state for the loading spinner
+    bool isUpdating = false;
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent closing while saving
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
@@ -178,7 +175,7 @@ class _MyVideosPageState extends State<MyVideosPage> {
               ),
               ElevatedButton(
                 onPressed: isUpdating ? null : () async {
-                  setDialogState(() => isUpdating = true); // Start loading
+                  setDialogState(() => isUpdating = true);
 
                   try {
                     await _videoService.updateVideoDetails(
@@ -189,7 +186,7 @@ class _MyVideosPageState extends State<MyVideosPage> {
                     );
 
                     if (mounted) {
-                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(context);
                       // Show success message
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

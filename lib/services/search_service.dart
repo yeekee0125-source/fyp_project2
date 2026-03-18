@@ -9,7 +9,7 @@ class SearchService {
     String? category,
     String? skillLevel,
     int? maxTime,
-    List<String>? fullCategoryList, // Pass the hardcoded list here for "Other" logic
+    List<String>? fullCategoryList,
   }) async {
     // If the user clicks "Other", we redirect to the custom logic
     if (category == 'Other' && fullCategoryList != null) {
@@ -52,7 +52,7 @@ class SearchService {
       final allRecipes = (response as List).map((json) => RecipeModel.fromJson(json)).toList();
 
       // 3. Filter locally: Find recipes whose categories are NOT in the cleanExcludeList
-      // This is often more reliable for Supabase array 'not contains' logic
+      //  more reliable for Supabase array 'not contains' logic
       return allRecipes.where((recipe) {
         return recipe.category.any((cat) => !cleanExcludeList.contains(cat));
       }).toList();

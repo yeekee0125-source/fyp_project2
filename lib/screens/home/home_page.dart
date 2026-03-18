@@ -53,7 +53,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final prefs = await db.getUserPreferences();
 
       final generated = await _geminiService.generateRecipe(
-        keyword,   // ← AI now uses trending search
+        keyword,
         prefs,
       );
 
@@ -187,7 +187,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // AI SECTION
               _buildAiSection(),
 
               const SizedBox(height: 20),

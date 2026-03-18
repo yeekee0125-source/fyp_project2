@@ -191,7 +191,7 @@ class DatabaseService {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
-    // 🌐 WEB → Supabase ONLY
+    // WEB → Supabase ONLY
     if (kIsWeb) {
       final data = await supabase
           .from('users')
@@ -201,7 +201,7 @@ class DatabaseService {
       return data;
     }
 
-    // 📱 MOBILE → SQLite first
+    // MOBILE → SQLite first
     final db = await database;
     final maps = await db.query('users', where: 'id = ?', whereArgs: [user.id]);
 

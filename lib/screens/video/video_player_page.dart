@@ -57,7 +57,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 1. Show Thumbnail (封面) while loading or if error occurs
+            // 1. Show Thumbnail while loading or if error occurs
             if (!_controller.value.isInitialized || _hasError)
               Image.network(
                 widget.thumbnailUrl,

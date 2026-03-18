@@ -25,7 +25,6 @@ class VideoService {
       final String videoUrl = _supabase.storage.from('tutorial_videos').getPublicUrl(videoPath);
 
       // 2. Storage Upload for THUMBNAIL
-      // Tip: Save images in a separate folder or bucket for better organization
       final thumbName = '$timestamp.jpg';
       final thumbPath = '$currentUserId/$thumbName';
       await _supabase.storage.from('thumbnails').upload(thumbPath, thumbnailFile);

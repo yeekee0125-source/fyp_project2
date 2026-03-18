@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/feedback_service.dart';
+import '../ai_chatbot/chat_page.dart';
 
 class UserMessagePage extends StatefulWidget {
   const UserMessagePage({super.key});
@@ -9,10 +10,17 @@ class UserMessagePage extends StatefulWidget {
   State<UserMessagePage> createState() => _UserMessagePageState();
 }
 
-class _UserMessagePageState extends State<UserMessagePage> {
+class _UserMessagePageState extends State<UserMessagePage> with SingleTickerProviderStateMixin {
   final _service = FeedbackService();
   final _msgController = TextEditingController();
   final ScrollController _modalScrollController = ScrollController();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -29,7 +37,6 @@ class _UserMessagePageState extends State<UserMessagePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gradient background for a more premium feel
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -42,25 +49,14 @@ class _UserMessagePageState extends State<UserMessagePage> {
           child: Column(
             children: [
               _buildAppBar(),
+              _buildTabToggle(),
               Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: _service.getUserStream(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: Colors.orange));
-                    }
-                    final tickets = snapshot.data ?? [];
-
-                    if (tickets.isEmpty) {
-                      return _buildEmptyState();
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      itemCount: tickets.length,
-                      itemBuilder: (context, index) => _buildTicketCard(tickets[index]),
-                    );
-                  },
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildSupportTabContent(),
+                    const ChatPage(),
+                  ],
                 ),
               ),
             ],
@@ -69,6 +65,59 @@ class _UserMessagePageState extends State<UserMessagePage> {
       ),
     );
   }
+
+  Widget _buildTabToggle() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.brown.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          color: Colors.orange,
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.brown,
+        dividerColor: Colors.transparent,
+        labelPadding: EdgeInsets.zero,
+        tabs: const [
+          Tab(
+            child: Center(
+              child: Text("Support", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          Tab(
+            child: Center(
+              child: Text("AI Coach", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportTabContent() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _service.getUserStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.orange));
+        }
+        final tickets = snapshot.data ?? [];
+        if (tickets.isEmpty) return _buildEmptyState();
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          itemCount: tickets.length,
+          itemBuilder: (context, index) => _buildTicketCard(tickets[index]),
+        );
+      },
+    );
+  }
+
 
   Widget _buildAppBar() {
     return Padding(
@@ -100,6 +149,7 @@ class _UserMessagePageState extends State<UserMessagePage> {
       ),
     );
   }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -154,7 +204,7 @@ class _UserMessagePageState extends State<UserMessagePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Required for custom shape
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
         decoration: const BoxDecoration(
@@ -231,27 +281,14 @@ class _UserMessagePageState extends State<UserMessagePage> {
         crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
-            margin: EdgeInsets.only(
-              top: 8, bottom: 2,
-              left: isMe ? 50 : 0, right: isMe ? 0 : 50,
-            ),
+            margin: EdgeInsets.only(top: 8, bottom: 2, left: isMe ? 50 : 0, right: isMe ? 0 : 50),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: isMe ? Colors.orange : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: isMe ? const Radius.circular(20) : Radius.zero,
-                bottomRight: isMe ? Radius.zero : const Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5, offset: const Offset(0, 2))
-              ],
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5, offset: const Offset(0, 2))],
             ),
-            child: Text(
-              chat['message'],
-              style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
-            ),
+            child: Text(chat['message'], style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
           ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0, left: 4, right: 4),
@@ -265,26 +302,16 @@ class _UserMessagePageState extends State<UserMessagePage> {
   Widget _buildInput(String feedbackId) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
+      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]),
       child: SafeArea(
         child: Row(
           children: [
             Expanded(
               child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(30)),
                 child: TextField(
                   controller: _msgController,
-                  decoration: const InputDecoration(
-                    hintText: "Describe your issue...",
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    border: InputBorder.none,
-                  ),
+                  decoration: const InputDecoration(hintText: "Describe your issue...", contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), border: InputBorder.none),
                 ),
               ),
             ),
@@ -297,11 +324,7 @@ class _UserMessagePageState extends State<UserMessagePage> {
                 await _service.sendMessage(feedbackId, text, 'user');
                 _scrollToBottom();
               },
-              child: const CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.orange,
-                child: Icon(Icons.send_rounded, color: Colors.white, size: 20),
-              ),
+              child: const CircleAvatar(radius: 24, backgroundColor: Colors.orange, child: Icon(Icons.send_rounded, color: Colors.white, size: 20)),
             ),
           ],
         ),
