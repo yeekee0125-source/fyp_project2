@@ -10,6 +10,8 @@ import 'ai_calorie_scan/calorie_estimate_page.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/home/home_page.dart';
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -17,8 +19,16 @@ final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMesseng
 const String url = 'https://ivmmxdmqzkzkkencnhue.supabase.co';
 const String key = 'sb_publishable_ipmlvwO4J3IXnT18CUR4Jw_C-XDEq4Y';
 
+
+
 Future<void> main() async {
+  // 1. Initialize Flutter bindings first
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Load the hidden environment variables
+  await dotenv.load(fileName: ".env");
+
+  // 3. Initialize Supabase
   await Supabase.initialize(
       url: url,
       anonKey: key,
@@ -27,6 +37,7 @@ Future<void> main() async {
       )
   );
 
+  // 4. Run the app
   runApp(const KitchenBuddyApp());
 }
 

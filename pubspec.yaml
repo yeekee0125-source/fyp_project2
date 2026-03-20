@@ -45,7 +45,7 @@ dependencies:
   video_player: ^2.10.1
   fl_chart: ^0.66.0
   google_generative_ai: ^0.4.7
-  flutter_dotenv: ^5.1.0
+  flutter_dotenv: ^6.0.0
 
 
 dev_dependencies:
@@ -71,6 +71,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/secrets.env
+    - .env
 
   # To add assets to your application, add an assets section, like this:
   # assets:
