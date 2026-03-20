@@ -6,7 +6,7 @@ class AICoachService {
   final _client = Supabase.instance.client;
   final _model = GenerativeModel(
     model: 'gemini-2.5-flash',
-    apiKey: 'AIzaSyBphkvqSAw-6s2az2H3cxOiBrSo7n6R2bw',
+    apiKey: '',
   );
 
   Future<List<Map<String, dynamic>>> loadChatHistory() async {
