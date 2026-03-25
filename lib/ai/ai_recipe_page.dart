@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'ai_recipe_gemini.dart';
 import '../../services/database_service.dart';
-import '../../models/recipe_model.dart'; // Make sure this path is correct
-//import '../../ai/pantry_algorithm.dart'; // Uncomment and fix this import to wherever your PantryAlgorithm is!
+import '../../models/recipe_model.dart';
+import 'package:fyp_project2/ai/pantry_algorithm.dart';
+
 
 class AIRecipePage extends StatefulWidget {
   const AIRecipePage({super.key});
@@ -19,7 +20,7 @@ class _AIRecipePageState extends State<AIRecipePage> {
   // 🧠 1. SMART PANTRY STATE VARIABLES
   // ==========================================
   final TextEditingController _pantryInputCtrl = TextEditingController();
-  // final PantryAlgorithm _pantryAlgo = PantryAlgorithm(); // Uncomment this when you fix the import!
+  final PantryAlgorithm _pantryAlgo = PantryAlgorithm();
   final List<String> _myPantryIngredients = [];
   List<Map<String, dynamic>> _pantryResults = [];
   bool _isPantryLoading = false;
@@ -93,10 +94,10 @@ class _AIRecipePageState extends State<AIRecipePage> {
     setState(() => _isPantryLoading = true);
 
     // 🔥 Make sure your PantryAlgorithm class is imported at the top!
-    // final results = await _pantryAlgo.findMatchingRecipes(_myPantryIngredients);
+    final results = await _pantryAlgo.findMatchingRecipes(_myPantryIngredients);
 
     setState(() {
-      // _pantryResults = results; // Uncomment this when your algorithm is linked
+      _pantryResults = results;
       _isPantryLoading = false;
       _hasSearchedPantry = true;
     });
