@@ -46,6 +46,7 @@ dependencies:
   fl_chart: ^0.66.0
   google_generative_ai: ^0.4.7
   flutter_dotenv: ^6.0.0
+  showcaseview: ^5.0.1
 
 
 dev_dependencies:
@@ -70,7 +71,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/secrets.env
     - .env
 
   # To add assets to your application, add an assets section, like this:

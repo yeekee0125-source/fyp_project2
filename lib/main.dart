@@ -1,25 +1,23 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:fyp_project2/screens/admin/onboarding_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fyp_project2/screens/auth/login.dart';
 import 'package:fyp_project2/screens/auth/reset_password.dart';
 import 'package:fyp_project2/screens/profile/profile_page.dart';
 import 'package:fyp_project2/screens/recipe/upload_selection_screen.dart';
 import 'package:fyp_project2/screens/user_message_page.dart';
 import 'package:fyp_project2/services/database_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ai_calorie_scan/calorie_estimate_page.dart';
 import 'screens/admin/admin_dashboard.dart';
 import 'screens/home/home_page.dart';
-import 'dart:async';
-import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 const String url = 'https://ivmmxdmqzkzkkencnhue.supabase.co';
 const String key = 'sb_publishable_ipmlvwO4J3IXnT18CUR4Jw_C-XDEq4Y';
-
-
 
 Future<void> main() async {
   // 1. Initialize Flutter bindings first
@@ -54,7 +52,8 @@ class KitchenBuddyApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFFFF3C2),
       ),
-      home: const AuthGate(),
+      // 🔥 2. CHANGED: Now it loads the Onboarding Screen first!
+      home: const OnboardingScreen(),
     );
   }
 }
@@ -131,18 +130,12 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Check if the keyboard is visible
     bool isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
-      // 2. This ensures the body adjusts when keyboard appears
       resizeToAvoidBottomInset: true,
-
       body: IndexedStack(index: _currentIndex, children: _pages),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      // 3. Only show the FAB if the keyboard is NOT visible
       floatingActionButton: isKeyboardVisible
           ? null
           : FloatingActionButton(
@@ -154,12 +147,10 @@ class _MainNavigationContainerState extends State<MainNavigationContainer> {
         },
         child: const Icon(Icons.add_circle, size: 55, color: Colors.orange),
       ),
-
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         color: Colors.white,
-        // 4. Hide the bottom bar too if keyboard is visible for a cleaner look
         child: isKeyboardVisible
             ? const SizedBox.shrink()
             : Row(
