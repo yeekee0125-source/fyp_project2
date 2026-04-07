@@ -11,6 +11,7 @@ import '../recipe/view_recipe.dart';
 import '../video/video_player_page.dart';
 import 'package:fyp_project2/ai/ai_recipe_gemini.dart';
 import 'package:fyp_project2/ai/ai_recipe_page.dart';
+import 'notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -90,13 +91,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         centerTitle: true,
         title: const Text(
           'KitchenBuddy',
-          style: TextStyle(
-            color: Color(0xFFE67E22),
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
+          style: TextStyle(color: Color(0xFFE67E22), fontWeight: FontWeight.bold, fontSize: 22),
         ),
         actions: [
+          // 🔥 1. ADD THE NOTIFICATION BELL HERE
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.black),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationPage()),
+              );
+            },
+          ),
+
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.black),
             onPressed: () async {
