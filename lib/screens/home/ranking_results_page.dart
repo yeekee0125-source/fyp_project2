@@ -41,7 +41,6 @@ class RankingResultsPage extends StatelessWidget {
               String title = "";
               int count = 0;
 
-              // Setting data based on rankType
               if (rankType == 'likes') {
                 title = item['title'] ?? "Untitled Recipe";
                 count = item['like_count'] ?? 0;
@@ -57,7 +56,6 @@ class RankingResultsPage extends StatelessWidget {
                 child: ListTile(
                   onTap: () {
                     if (rankType == 'likes') {
-                      // Navigate to Recipe View
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -65,7 +63,6 @@ class RankingResultsPage extends StatelessWidget {
                         ),
                       );
                     } else {
-                      // Navigate to Creator's contribution page
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -82,7 +79,6 @@ class RankingResultsPage extends StatelessWidget {
                       title,
                       style: const TextStyle(fontWeight: FontWeight.bold)
                   ),
-                  // Subtitle removed for both Creators and Recipes as requested
                   subtitle: null,
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

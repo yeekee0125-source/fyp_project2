@@ -63,6 +63,28 @@ class InteractionService {
     }
   }
 
+// --- FETCH SAVED RECIPES FOR PROFILE ---
+  Stream<List<Map<String, dynamic>>> getSavedRecipesStream() {
+    if (currentUserId.isEmpty) return Stream.value([]);
+
+    return _supabase
+        .from('saves')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', currentUserId)
+        .asyncMap((saveRows) async {
+      final recipeIds = saveRows.map((row) => row['recipe_id']).toList();
+
+      if (recipeIds.isEmpty) return [];
+
+      final recipeData = await _supabase
+          .from('recipes')
+          .select('*')
+          .inFilter('id', recipeIds);
+
+      return List<Map<String, dynamic>>.from(recipeData);
+    });
+  }
+
   // --- COMMENTS LOGIC ---
   Future<int> getCommentCount(int recipeId) async {
     final res = await _supabase.from('comments').select('id').eq('recipe_id', recipeId);
