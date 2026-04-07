@@ -48,20 +48,21 @@ class VideoService {
   }
 
   Stream<List<VideoModel>> getVideoStream(String level) {
-    if (level == 'All') {
-      return _supabase
-          .from('videos')
-          .stream(primaryKey: ['id'])
-          .order('created_at', ascending: false)
-          .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
+    var stream = _supabase
+        .from('videos')
+        .stream(primaryKey: ['id']);
+
+    if (level != 'All') {
+      return stream
+          .map((data) => data
+          .where((json) => json['skill_level'] == level)
+          .map((json) => VideoModel.fromJson(json))
+          .toList());
     }
 
-    return _supabase
-        .from('videos')
-        .stream(primaryKey: ['id'])
-        .eq('skill_level', level) // Filter applied first
-        .order('created_at', ascending: false) // Order applied second
-        .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
+    return stream.map((data) =>
+        data.map((json) => VideoModel.fromJson(json)).toList()
+    );
   }
 
   // DELETE logic
@@ -72,19 +73,26 @@ class VideoService {
           .select('role')
           .eq('id', currentUserId)
           .maybeSingle();
-
       bool isAdmin = userRes != null && userRes['role'] == 'admin';
-
       if (currentUserId == uploaderId || isAdmin) {
-        await _supabase.from('videos').delete().eq('id', videoId);
+        final response = await _supabase
+            .from('videos')
+            .delete()
+            .eq('id', videoId)
+            .select();
+        if (response.isEmpty) {
+          throw Exception("No record found to delete or RLS policy blocked the action.");
+        }
+        print("Delete successful for UUID: $videoId");
       } else {
-        throw Exception("Unauthorized");
+        throw Exception("Unauthorized: You do not have permission to delete this.");
       }
     } catch (e) {
       print("Delete Error: $e");
       rethrow;
     }
   }
+
   Future<void> updateVideoDetails(String videoId, String newTitle, String newDesc, String newLevel) async {
     await _supabase.from('videos').update({
       'title': newTitle,
@@ -104,4 +112,6 @@ class VideoService {
         .order('created_at', ascending: false)
         .map((data) => data.map((json) => VideoModel.fromJson(json)).toList());
   }
+
+
 }

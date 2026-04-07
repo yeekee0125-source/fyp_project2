@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/database_service.dart';
 import '../auth/login.dart';
+import 'admin_video_management.dart';
 import 'report_users.dart';
 import 'pending_recipes.dart';
 import 'admin_feedback_page.dart';
@@ -78,6 +79,19 @@ class AdminDashboard extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const AdminFeedbackPage())
                 );
               },
+            ),
+
+            // 5. Video & Content Management
+            _buildAdminTile(
+              context,
+              title: "Video Management",
+              subtitle: "Delete or manage uploaded tutorial videos",
+              icon: Icons.video_collection_rounded,
+              color: Colors.purple,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminVideoManagementPage())
+              ),
             ),
           ],
         ),

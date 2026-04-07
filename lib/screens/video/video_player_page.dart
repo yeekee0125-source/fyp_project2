@@ -25,17 +25,35 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {});
-          _controller.play();
-        }
-      }).catchError((error) {
-        if (mounted) {
-          setState(() => _hasError = true);
-        }
-      });
+
+    // Use .networkUrl with specific hardware-friendly options
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.videoUrl),
+      // This helps bypass some hardware decoder resource limits on physical phones
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    );
+
+    _controller.initialize().then((_) {
+      if (mounted) {
+        setState(() {
+          _hasError = false; // Reset error if initialization finally works
+        });
+        _controller.play();
+        _controller.setLooping(true); // Optional: keep it playing for tutorials
+      }
+    }).catchError((error) {
+      debugPrint("Video Player Error: $error");
+      if (mounted) {
+        setState(() => _hasError = true);
+      }
+    });
+
+    // Listen for changes (like buffering or completion)
+    _controller.addListener(() {
+      if (_controller.value.hasError && mounted) {
+        setState(() => _hasError = true);
+      }
+    });
   }
 
   @override
