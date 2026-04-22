@@ -1,16 +1,28 @@
-# fyp_project2
+# KitchenBuddy 
+A cross-platform mobile application that uses Hybrid-AI to generate personalized, dietary-compliant recipes based on the ingredients you already have in your pantry.
 
-A new Flutter project.
+App Screenshots
+(Insert 3 side-by-side images here: 1. The Smart Pantry, 2. The AI Chef generating a recipe, 3. The Admin Dashboard)
 
-## Getting Started
+Tech Stack
 
-This project is a starting point for a Flutter application.
+Frontend: Flutter, Dart
 
-A few resources to get you started if this is your first Flutter project:
+Backend & Database: Supabase, PostgreSQL
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+AI / LLM: Google Gemini 3.1 Flash API
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Local Storage: SQLite (for offline caching)
+
+Core Features
+
+Smart Pantry: Uses a Set-Intersection algorithm to match available ingredients to recipes.
+
+AI Chef: Generates strictly formatted vegetarian/halal recipes using prompt-engineered Gemini LLM.
+
+Offline Mode: SQLite caches text data so users can read recipes without Wi-Fi.
+
+Admin Moderation: Optimistic UI dashboard to ban reported users via Supabase Row Level Security.
+
+How to Run Locally
+(Add 2 or 3 quick steps on how to do flutter pub get and flutter run)
